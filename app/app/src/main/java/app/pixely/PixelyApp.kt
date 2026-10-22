@@ -36,7 +36,7 @@ class PixelyApp : Application(), SingletonImageLoader.Factory, Configuration.Pro
         // Picks up a model change, and a run that never got queued (first launch, a cleared job).
         scope.launch {
             settings.checkModel()
-            if (db.photoDao().pendingCount() > 0) indexer.start()
+            if (db.photoDao().pendingCount() > 0) indexer.startNow()
         }
     }
 

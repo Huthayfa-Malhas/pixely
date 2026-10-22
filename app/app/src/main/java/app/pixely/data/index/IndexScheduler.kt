@@ -1,6 +1,7 @@
 package app.pixely.data.index
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -13,6 +14,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 /** One indexing job at a time, under a unique name; WorkManager keeps it across reboots. */
@@ -37,9 +39,22 @@ class IndexScheduler @Inject constructor(
                     .build()
             )
             .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
+            // A stop (app update, reboot, charger out) counts as an attempt; don't let the wait double each time.
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .addTag(NAME)
             .build()
         work.enqueueUniqueWork(NAME, policy, request)
+    }
+
+    /**
+     * From the app opening: start now unless a job is already running or waiting for the next window.
+     * A job sitting in a retry delay after being stopped is replaced, so it doesn't wait it out.
+     */
+    suspend fun startNow() {
+        val queued = work.getWorkInfosForUniqueWorkFlow(NAME).first().filterNot { it.state.isFinished }
+        val running = queued.any { it.state == WorkInfo.State.RUNNING }
+        val paused = (db.metaDao().get(MetaKey.RESUME_AT)?.toLongOrNull() ?: 0) > System.currentTimeMillis()
+        start(if (running || paused) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.REPLACE)
     }
 
     /** The job that will run next: the running one, else the queued one; null when there is none. */
