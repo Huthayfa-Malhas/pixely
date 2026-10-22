@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ draws its own launch screen; keep it on the app's ground colour. -->
+    <style name="Theme.Pixely" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0F1012</item>
+        <item name="android:windowSplashScreenBackground">#0F1012</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
