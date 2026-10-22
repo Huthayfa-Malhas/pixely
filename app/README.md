@@ -27,3 +27,14 @@ Room 3 + sqlite-vec with the plan's tables, and `VectorIndex`. No model yet (wee
 
 Debug builds read only `Pictures/PixelyTest/` so testing never shows the phone's own library
 (`-Ppixely.testFolder=` for everything; release builds always see everything).
+
+## On-phone UI test
+
+Xiaomi blocks the Gradle test installer and adb input, so install both APKs by hand (approve each on
+the phone) and run the test with `am instrument`:
+
+    ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+    adb install -r app/build/outputs/apk/debug/app-debug.apk
+    adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+    adb shell am instrument -w -e class app.pixely.ViewerTest app.pixely.test/androidx.test.runner.AndroidJUnitRunner
+    adb pull /sdcard/Android/data/app.pixely/files/test-shots
