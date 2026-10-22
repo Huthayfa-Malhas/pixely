@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Pixely</string>
+    <string name="indexing_channel">Indexing</string>
+    <string name="indexing_title">Getting your photos ready to search</string>
 </resources>

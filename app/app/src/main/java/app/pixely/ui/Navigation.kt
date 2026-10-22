@@ -1,11 +1,14 @@
 package app.pixely.ui
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +26,8 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.pixely.data.media.PhotoAccess
+import app.pixely.ui.indexing.IndexingScreen
+import app.pixely.ui.indexing.IndexingViewModel
 import app.pixely.ui.photos.GridItem
 import app.pixely.ui.photos.LibraryViewModel
 import app.pixely.ui.photos.PhotosScreen
@@ -36,10 +41,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class Viewer(val photoId: Long) : NavKey
 
+@Serializable data object Indexing : NavKey
+
 @Composable
-fun PixelyNav(vm: LibraryViewModel = hiltViewModel()) {
+fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewModel = hiltViewModel()) {
     val access by vm.access.collectAsStateWithLifecycle()
     val library by vm.library.collectAsStateWithLifecycle()
+    val indexing by indexingVm.state.collectAsStateWithLifecycle()
     val backStack = rememberNavBackStack(if (access == PhotoAccess.NONE) Welcome else Photos)
     val gridState = rememberLazyGridState()
     val activity = LocalActivity.current
@@ -59,8 +67,10 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel()) {
     }
 
     LaunchedEffect(access) {
+        // First run: show the first index over the grid, as the design does; "Start searching" drops to the grid.
         if (access != PhotoAccess.NONE && backStack.lastOrNull() == Welcome) {
             backStack.add(Photos)
+            backStack.add(Indexing)
             backStack.remove(Welcome)
         }
     }
@@ -85,9 +95,23 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel()) {
                 PhotosScreen(
                     library = library,
                     access = access,
+                    indexing = indexing,
                     gridState = gridState,
                     onOpen = { index -> backStack.add(Viewer(library.photos[index].id)) },
                     onChangeSelection = { askForPhotos.launch(PhotoAccess.permissions) },
+                    onIndexing = { backStack.add(Indexing) },
+                )
+            }
+            entry<Indexing> {
+                // Progress is in the notification while indexing runs; asked here, where the reason is on screen.
+                val askForNotifications = rememberLauncherForActivityResult(RequestPermission()) {}
+                LaunchedEffect(Unit) {
+                    if (Build.VERSION.SDK_INT >= 33) askForNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                IndexingScreen(
+                    state = indexing,
+                    onChargingOnly = indexingVm::setChargingOnly,
+                    onDone = { backStack.removeLastOrNull() },
                 )
             }
             entry<Viewer> { key ->

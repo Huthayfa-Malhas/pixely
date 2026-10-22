@@ -8,6 +8,7 @@ import androidx.room3.RoomDatabase
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
+import app.pixely.data.model.MODEL_ID
 import app.pixely.data.search.DIMS
 import kotlinx.coroutines.Dispatchers
 
@@ -54,7 +55,7 @@ abstract class PixelyDatabase : RoomDatabase() {
     /** Things Room can't declare: defaults, clean-up triggers, and the sqlite-vec table. */
     private class Setup(private val vecLoaded: Boolean) : Callback() {
         override suspend fun onCreate(connection: SQLiteConnection) {
-            connection.execSQL("INSERT INTO index_meta(`key`, value) VALUES ('${MetaKey.MODEL}', 'embeddinggemma-2-740m')")
+            connection.execSQL("INSERT INTO index_meta(`key`, value) VALUES ('${MetaKey.MODEL}', '$MODEL_ID')")
             connection.execSQL("INSERT INTO index_meta(`key`, value) VALUES ('${MetaKey.DETAIL}', '140')")
             connection.execSQL("INSERT INTO index_meta(`key`, value) VALUES ('${MetaKey.SEARCH_SIZE}', '$DIMS')")
             connection.execSQL("INSERT INTO index_meta(`key`, value) VALUES ('${MetaKey.SCHEMA}', '1')")

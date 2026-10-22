@@ -6,6 +6,7 @@ import app.pixely.data.db.Photo
 import app.pixely.data.db.PixelyDatabase
 import app.pixely.data.db.SyncDiff
 import app.pixely.data.db.SyncKey
+import app.pixely.data.index.IndexScheduler
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,7 @@ import kotlinx.coroutines.withContext
 class PhotoSync @Inject constructor(
     private val db: PixelyDatabase,
     private val source: MediaStoreSource,
+    private val indexer: IndexScheduler,
 ) {
     private val mutex = Mutex()
 
@@ -30,6 +32,7 @@ class PhotoSync @Inject constructor(
             val dao = db.photoDao()
             val diff = diff(dao.syncKeys(), source.readAll())
             if (!diff.isEmpty) dao.apply(diff)
+            if (diff.added.isNotEmpty() || diff.changed.isNotEmpty()) indexer.start()
             Log.i(TAG, "Sync: +${diff.added.size} ~${diff.changed.size} -${diff.removed.size} in ${(System.nanoTime() - started) / 1_000_000} ms")
             diff
         }

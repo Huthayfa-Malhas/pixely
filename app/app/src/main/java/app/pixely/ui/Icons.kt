@@ -32,6 +32,7 @@ object Icons {
         "M21 16l-5-5-8 8",
     )
     val Without = icon("M21 12a9 9 0 1 1-18 0a9 9 0 1 1 18 0", "M5.6 5.6l12.8 12.8")
+    val Bolt = icon("M13 2L4 14h7l-1 8 9-12h-7z")
     val Back = icon("M15 5l-7 7 7 7")
     val Share = icon(
         "M8.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 1 1 5 0",
