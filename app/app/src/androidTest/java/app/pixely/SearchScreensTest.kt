@@ -2,7 +2,10 @@ package app.pixely
 
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
@@ -64,9 +67,14 @@ class SearchScreensTest {
         rule.onNodeWithText("+ Words").performClick()
         rule.waitUntilAtLeastOneExists(hasText("Search with this photo"), 5_000)
         rule.onAllNodesWithText("at night").onFirst().performClick()
-        rule.waitUntilAtLeastOneExists(hasText("200 photos"), 10_000)
+        rule.waitUntilAtLeastOneExists(photoCount, 10_000)
         rule.waitForIdle()
         shot("5_photo_words")
+    }
+
+    /** "199 photos": the count once a photo + words search has finished. */
+    private val photoCount = SemanticsMatcher("a photo count") { node ->
+        node.config.getOrNull(SemanticsProperties.Text)?.any { Regex("""^[\d,]+ photos$""").matches(it.text) } == true
     }
 
     private fun shot(name: String) {

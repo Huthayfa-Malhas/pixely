@@ -108,7 +108,7 @@ private fun summary(state: ResultsState): String {
         state.modelMissing -> "The AI model isn't on this phone yet, so search can't run"
         state.searching && state.photos.isEmpty() -> "Searching…"
         state.photos.isEmpty() -> "No photos found" + if (state.dates != DateFilter.ANY) " in this date range" else ""
-        else -> "${number.format(state.photos.size)} best matches first" +
+        else -> "${number.format(state.photos.size)} photos · best matches first" +
             if (state.notIndexed > 0) " · ${number.format(state.notIndexed)} photos not indexed yet" else ""
     }
 }
