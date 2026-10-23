@@ -27,6 +27,8 @@ object MetaKey {
     const val SEARCH_SIZE = "search_size"
     const val SCHEMA = "schema_version"
     const val CHARGING_ONLY = "charging_only"
+    /** Set while the user has paused indexing; nothing starts it until they resume. */
+    const val USER_PAUSED = "user_paused"
     /** Foreground time used in the current 24 h window, against Android's 6 h cap for mediaProcessing. */
     const val BUDGET_WINDOW_START = "budget_window_start"
     const val BUDGET_USED_MS = "budget_used_ms"

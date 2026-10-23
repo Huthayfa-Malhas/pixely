@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 /** Where indexing stands, in the terms the screen and the Photos chip speak. */
 sealed interface IndexStatus {
     data object Done : IndexStatus
+    data object PausedByUser : IndexStatus
     data class Running(val charging: Boolean, val msLeft: Long?) : IndexStatus
     data object WaitingForCharger : IndexStatus
     data class Paused(val resumeAt: Long) : IndexStatus
@@ -53,6 +54,7 @@ data class IndexingState(
 fun indexStatus(
     progress: IndexProgress,
     work: WorkInfo.State?,
+    userPaused: Boolean,
     problem: String?,
     resumeAt: Long?,
     msPerPhoto: Double?,
@@ -61,6 +63,8 @@ fun indexStatus(
     now: Long,
 ): IndexStatus = when {
     progress.pending == 0 -> IndexStatus.Done
+    // Ahead of Running: the cancelled job can still show as running for a moment.
+    userPaused -> IndexStatus.PausedByUser
     work == WorkInfo.State.RUNNING -> IndexStatus.Running(charging, msPerPhoto?.let { (it * progress.pending).toLong() })
     problem == IndexWorker.PROBLEM_MODEL_MISSING -> IndexStatus.ModelMissing
     resumeAt != null && resumeAt > now -> IndexStatus.Paused(resumeAt)
@@ -72,7 +76,7 @@ fun indexStatus(
 class IndexingViewModel @Inject constructor(
     @ApplicationContext context: Context,
     db: PixelyDatabase,
-    scheduler: IndexScheduler,
+    private val scheduler: IndexScheduler,
     private val settings: IndexSettings,
 ) : ViewModel() {
 
@@ -80,12 +84,12 @@ class IndexingViewModel @Inject constructor(
 
     private val status: Flow<IndexStatus> = combine(
         db.photoDao().observeProgress(),
-        scheduler.observe(),
+        combine(scheduler.observe(), scheduler.observePaused(), ::Pair),
         combine(meta.observe(MetaKey.PROBLEM), meta.observe(MetaKey.RESUME_AT), meta.observe(MetaKey.MS_PER_PHOTO), ::Triple),
         settings.observeChargingOnly(),
         charging(context),
-    ) { progress, work, (problem, resumeAt, msPerPhoto), chargingOnly, charging ->
-        indexStatus(progress, work?.state, problem, resumeAt?.toLongOrNull(), msPerPhoto?.toDoubleOrNull(), chargingOnly, charging, System.currentTimeMillis())
+    ) { progress, (work, userPaused), (problem, resumeAt, msPerPhoto), chargingOnly, charging ->
+        indexStatus(progress, work?.state, userPaused, problem, resumeAt?.toLongOrNull(), msPerPhoto?.toDoubleOrNull(), chargingOnly, charging, System.currentTimeMillis())
     }
 
     val state: StateFlow<IndexingState> = combine(
@@ -99,6 +103,10 @@ class IndexingViewModel @Inject constructor(
 
     fun setChargingOnly(on: Boolean) {
         viewModelScope.launch { settings.setChargingOnly(on) }
+    }
+
+    fun setPaused(paused: Boolean) {
+        viewModelScope.launch { if (paused) scheduler.pause() else scheduler.resume() }
     }
 
     private companion object {

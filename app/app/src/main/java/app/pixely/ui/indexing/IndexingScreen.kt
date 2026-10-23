@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +47,7 @@ import java.time.format.FormatStyle
 
 /** "Getting your library ready": progress, what's holding it up, and the settings that decide its pace. */
 @Composable
-fun IndexingScreen(state: IndexingState, onChargingOnly: (Boolean) -> Unit, onDone: () -> Unit) {
+fun IndexingScreen(state: IndexingState, onChargingOnly: (Boolean) -> Unit, onPause: (Boolean) -> Unit, onDone: () -> Unit) {
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(start = 24.dp, end = 24.dp, bottom = 24.dp)) {
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 32.dp, bottom = 24.dp),
@@ -63,7 +64,7 @@ fun IndexingScreen(state: IndexingState, onChargingOnly: (Boolean) -> Unit, onDo
                     color = PixelyColors.TextMuted,
                 )
             }
-            Progress(state)
+            Progress(state, onPause)
             if (state.recent.isNotEmpty()) Recent(state)
             Options(state, onChargingOnly)
         }
@@ -72,7 +73,7 @@ fun IndexingScreen(state: IndexingState, onChargingOnly: (Boolean) -> Unit, onDo
 }
 
 @Composable
-private fun Progress(state: IndexingState) {
+private fun Progress(state: IndexingState, onPause: (Boolean) -> Unit) {
     val number = NumberFormat.getIntegerInstance()
     Card {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -95,7 +96,13 @@ private fun Progress(state: IndexingState) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val active = state.status is IndexStatus.Running || state.status == IndexStatus.Done
                 Icon(Icons.Bolt, contentDescription = null, tint = if (active) PixelyColors.Good else PixelyColors.TextFaint, modifier = Modifier.size(16.dp))
-                Text(statusLine(state.status), style = MaterialTheme.typography.bodyMedium, color = PixelyColors.TextMuted)
+                Text(statusLine(state.status), style = MaterialTheme.typography.bodyMedium, color = PixelyColors.TextMuted, modifier = Modifier.weight(1f))
+                if (state.status != IndexStatus.Done) {
+                    val paused = state.status == IndexStatus.PausedByUser
+                    TextButton(onClick = { onPause(!paused) }) {
+                        Text(if (paused) "Resume" else "Pause", color = PixelyColors.Accent)
+                    }
+                }
             }
             if (state.progress.failed > 0) {
                 Text(
@@ -175,6 +182,7 @@ private fun Card(content: @Composable () -> Unit) {
 
 fun statusLine(status: IndexStatus): String = when (status) {
     IndexStatus.Done -> "Every photo is searchable"
+    IndexStatus.PausedByUser -> "Paused · search works on what's done"
     is IndexStatus.Running -> (if (status.charging) "Charging" else "On battery") + (status.msLeft?.let { " · about ${duration(it)} left" } ?: "")
     IndexStatus.WaitingForCharger -> "Waiting for the charger to continue"
     is IndexStatus.Paused -> "Paused for today · continues at ${clock(status.resumeAt)}"

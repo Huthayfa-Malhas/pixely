@@ -111,6 +111,7 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                 IndexingScreen(
                     state = indexing,
                     onChargingOnly = indexingVm::setChargingOnly,
+                    onPause = indexingVm::setPaused,
                     onDone = { backStack.removeLastOrNull() },
                 )
             }

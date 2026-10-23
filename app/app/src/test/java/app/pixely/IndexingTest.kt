@@ -29,16 +29,19 @@ class IndexingTest {
     private fun status(
         pending: Int = 10,
         work: WorkInfo.State? = WorkInfo.State.ENQUEUED,
+        userPaused: Boolean = false,
         problem: String? = null,
         resumeAt: Long? = null,
         chargingOnly: Boolean = true,
         charging: Boolean = false,
-    ) = indexStatus(IndexProgress(100, 100 - pending, 0), work, problem, resumeAt, 1_300.0, chargingOnly, charging, now = 1_000)
+    ) = indexStatus(IndexProgress(100, 100 - pending, 0), work, userPaused, problem, resumeAt, 1_300.0, chargingOnly, charging, now = 1_000)
 
     @Test
     fun `status says what is holding indexing up`() {
         assertEquals(IndexStatus.Done, status(pending = 0, work = null))
         assertEquals(IndexStatus.Running(charging = true, msLeft = 13_000), status(work = WorkInfo.State.RUNNING, charging = true))
+        assertEquals(IndexStatus.PausedByUser, status(work = WorkInfo.State.RUNNING, userPaused = true))
+        assertEquals(IndexStatus.Done, status(pending = 0, userPaused = true))
         assertEquals(IndexStatus.ModelMissing, status(problem = "model_missing"))
         assertEquals(IndexStatus.Paused(5_000), status(resumeAt = 5_000))
         assertEquals(IndexStatus.WaitingForCharger, status(resumeAt = 500))

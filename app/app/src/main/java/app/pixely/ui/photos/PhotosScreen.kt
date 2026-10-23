@@ -113,7 +113,7 @@ private fun IndexingChip(state: IndexingState, onClick: () -> Unit) {
     val text = when (val status = state.status) {
         is IndexStatus.Running -> "Indexing ${state.percent}% · ${if (status.charging) "charging" else "on battery"}"
         IndexStatus.WaitingForCharger -> "Indexing ${state.percent}% · waiting for charger"
-        is IndexStatus.Paused -> "Indexing paused · ${state.percent}%"
+        is IndexStatus.Paused, IndexStatus.PausedByUser -> "Indexing paused · ${state.percent}%"
         IndexStatus.ModelMissing -> "AI model not installed"
         else -> "Indexing ${state.percent}%"
     }
