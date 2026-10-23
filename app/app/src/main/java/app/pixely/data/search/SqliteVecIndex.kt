@@ -39,6 +39,8 @@ class SqliteVecIndex(private val db: PixelyDatabase) : VectorIndex {
         }
     }
 
+    override suspend fun vectors(photoIds: Collection<Long>): Map<Long, FloatArray> = db.readVectors(photoIds)
+
     override suspend fun nearest(query: FloatArray, k: Int): List<Hit> {
         val n = searchSize()
         return db.useReaderConnection { c ->

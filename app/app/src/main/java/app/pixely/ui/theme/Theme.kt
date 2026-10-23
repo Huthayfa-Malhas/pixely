@@ -30,6 +30,9 @@ object PixelyColors {
     val Accent = Color(0xFFF5B84A)
     val OnAccent = Color(0xFF1A1407)
     val AccentSoft = Color(0xFF3A2F17)
+    /** The "Without" chip and the Viewer's chosen action. */
+    val AccentTint = Color(0xFF2A2213)
+    val AccentText = Color(0xFFFFD58A)
     val Good = Color(0xFF9FDDBF)
     val GoodSoft = Color(0xFF1A2A22)
 }

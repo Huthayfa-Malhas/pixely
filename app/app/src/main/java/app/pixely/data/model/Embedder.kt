@@ -39,9 +39,10 @@ class Embedder private constructor(private val engine: UniversalEmbedder, val de
         /** Week 1: 256 tokens of text input saves about 1 GB over the model's default at the same speed. */
         private const val MAX_INPUT_LENGTH = 256
 
-        /** [detail] is image tokens per photo: 140 (Fine) or 70 (Fast). Loading takes about 20 s on the GPU. */
-        fun open(context: Context, model: File, detail: Int): Embedder =
-            try {
+        /** [detail] is image tokens per photo: 140 (Fine) or 70 (Fast). Loading takes about 20 s on the GPU, 3 s on the CPU. */
+        fun open(context: Context, model: File, detail: Int, delegate: Delegate = Delegate.GPU): Embedder =
+            if (delegate == Delegate.CPU) Embedder(create(context, model, detail, Delegate.CPU), Delegate.CPU)
+            else try {
                 Embedder(create(context, model, detail, Delegate.GPU), Delegate.GPU)
             } catch (e: Exception) {
                 Log.w(TAG, "GPU unavailable, using the CPU (about 3x slower)", e)

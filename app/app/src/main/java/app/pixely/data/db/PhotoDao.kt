@@ -28,6 +28,13 @@ abstract class PhotoDao {
     @Query("DELETE FROM photo WHERE id IN (:ids)")
     abstract suspend fun delete(ids: List<Long>)
 
+    /** In the order of [ids]' first appearance is the caller's job: SQL returns them in any order. */
+    @Query("SELECT id, uri, taken_at, width, height FROM photo WHERE id IN (:ids)")
+    abstract suspend fun byIds(ids: List<Long>): List<GridPhoto>
+
+    @Query("SELECT id FROM photo WHERE taken_at >= :from AND taken_at < :until AND index_state = 'DONE'")
+    abstract suspend fun indexedBetween(from: Long, until: Long): List<Long>
+
     /** Newest first, so a half-indexed library already finds recent photos. */
     @Query("SELECT id, uri, taken_at, width, height FROM photo WHERE index_state = 'PENDING' ORDER BY taken_at DESC, id DESC LIMIT :limit")
     abstract suspend fun nextPending(limit: Int): List<GridPhoto>

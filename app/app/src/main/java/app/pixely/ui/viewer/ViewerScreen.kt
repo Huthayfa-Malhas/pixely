@@ -4,6 +4,16 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,12 +45,16 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/**
- * One photo at a time, swiping through the library in grid order. Similar and + Words join
- * Share once search exists (weeks 6–7).
- */
+/** One photo at a time, swiping through the library in grid order, or through search results in their order. */
 @Composable
-fun ViewerScreen(photos: List<GridPhoto>, startIndex: Int, onBack: () -> Unit, onPage: (Int) -> Unit) {
+fun ViewerScreen(
+    photos: List<GridPhoto>,
+    startIndex: Int,
+    onBack: () -> Unit,
+    onPage: (Int) -> Unit,
+    onSimilar: (Long) -> Unit,
+    onWords: (Long) -> Unit,
+) {
     if (photos.isEmpty()) return
     val pager = rememberPagerState(initialPage = startIndex.coerceIn(0, photos.lastIndex)) { photos.size }
     LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect(onPage) }
@@ -67,8 +81,28 @@ fun ViewerScreen(photos: List<GridPhoto>, startIndex: Int, onBack: () -> Unit, o
                 color = PixelyColors.TextMuted,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = { share(context, current.uri) }) { Icon(Icons.Share, contentDescription = "Share", tint = PixelyColors.Text) }
         }
+        Row(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.45f)).navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Action(Icons.Similar, "Similar", chosen = true, Modifier.weight(1f)) { onSimilar(current.id) }
+            Action(Icons.PlusWords, "+ Words", chosen = false, Modifier.weight(1f)) { onWords(current.id) }
+            Action(Icons.Share, "Share", chosen = false, Modifier.weight(1f)) { share(context, current.uri) }
+        }
+    }
+}
+
+@Composable
+private fun Action(icon: ImageVector, label: String, chosen: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Column(
+        modifier.height(64.dp).clip(RoundedCornerShape(16.dp)).background(if (chosen) PixelyColors.AccentTint else PixelyColors.Field).clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+    ) {
+        Icon(icon, contentDescription = null, tint = if (chosen) PixelyColors.Accent else PixelyColors.Text, modifier = Modifier.size(20.dp))
+        Text(label, fontSize = 12.sp, fontWeight = if (chosen) FontWeight.SemiBold else FontWeight.Medium, color = if (chosen) PixelyColors.AccentText else PixelyColors.Text)
     }
 }
 

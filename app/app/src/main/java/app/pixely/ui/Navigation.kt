@@ -10,7 +10,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import app.pixely.data.db.GridPhoto
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +38,12 @@ import app.pixely.ui.indexing.IndexingViewModel
 import app.pixely.ui.photos.GridItem
 import app.pixely.ui.photos.LibraryViewModel
 import app.pixely.ui.photos.PhotosScreen
+import app.pixely.ui.search.PhotoWordsScreen
+import app.pixely.ui.search.PhotoWordsViewModel
+import app.pixely.ui.search.ResultsScreen
+import app.pixely.ui.search.ResultsViewModel
+import app.pixely.ui.search.SearchScreen
+import app.pixely.ui.search.SearchTabViewModel
 import app.pixely.ui.viewer.ViewerScreen
 import app.pixely.ui.welcome.WelcomeScreen
 import kotlinx.serialization.Serializable
@@ -39,7 +52,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object Photos : NavKey
 
-@Serializable data class Viewer(val photoId: Long) : NavKey
+/** [list] names the search results it was opened from; none means the whole library. */
+@Serializable data class Viewer(val photoId: Long, val list: String? = null) : NavKey
+
+@Serializable data object SearchTab : NavKey
+
+/** Words, or photos like [similarTo]. */
+@Serializable data class Results(val query: String = "", val similarTo: Long? = null) : NavKey
+
+@Serializable data class PhotoWords(val photoId: Long) : NavKey
 
 @Serializable data object Indexing : NavKey
 
@@ -52,6 +73,15 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
     val gridState = rememberLazyGridState()
     val activity = LocalActivity.current
     var denied by rememberSaveable { mutableStateOf(false) }
+    // Each results screen's photos, for the viewer to swipe through in that order.
+    val lists = remember { mutableStateMapOf<String, List<GridPhoto>>() }
+
+    fun select(tab: Tab) {
+        // Photos is the start tab: back from Search returns to it.
+        backStack.clear()
+        backStack.add(Photos)
+        if (tab == Tab.SEARCH) backStack.add(SearchTab)
+    }
 
     val askForPhotos = rememberLauncherForActivityResult(RequestMultiplePermissions()) {
         vm.onAccessChanged()
@@ -92,6 +122,7 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                 )
             }
             entry<Photos> {
+                Tabbed(Tab.PHOTOS, ::select) {
                 PhotosScreen(
                     library = library,
                     access = access,
@@ -100,6 +131,45 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onOpen = { index -> backStack.add(Viewer(library.photos[index].id)) },
                     onChangeSelection = { askForPhotos.launch(PhotoAccess.permissions) },
                     onIndexing = { backStack.add(Indexing) },
+                )
+                }
+            }
+            entry<SearchTab> {
+                val searchVm: SearchTabViewModel = hiltViewModel()
+                val recent by searchVm.recent.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { searchVm.warm() }
+                Tabbed(Tab.SEARCH, ::select) {
+                    SearchScreen(recent = recent, onSearch = { backStack.add(Results(query = it.trim())) })
+                }
+            }
+            entry<Results> { key ->
+                val resultsVm: ResultsViewModel = hiltViewModel()
+                val state by resultsVm.state.collectAsStateWithLifecycle()
+                val list = key.toString()
+                LaunchedEffect(key) { resultsVm.start(key.query, key.similarTo) }
+                LaunchedEffect(state.photos) { lists[list] = state.photos }
+                Tabbed(Tab.SEARCH, ::select) {
+                    ResultsScreen(
+                        state = state,
+                        onBack = { backStack.removeLastOrNull() },
+                        onSubmit = resultsVm::submit,
+                        onRemoveWithout = resultsVm::removeWithout,
+                        onDates = resultsVm::setDates,
+                        onOpen = { i -> backStack.add(Viewer(state.photos[i].id, list)) },
+                    )
+                }
+            }
+            entry<PhotoWords> { key ->
+                val wordsVm: PhotoWordsViewModel = hiltViewModel()
+                val state by wordsVm.state.collectAsStateWithLifecycle()
+                val list = key.toString()
+                LaunchedEffect(key) { wordsVm.start(key.photoId) }
+                LaunchedEffect(state.photos) { lists[list] = state.photos }
+                PhotoWordsScreen(
+                    state = state,
+                    onClose = { backStack.removeLastOrNull() },
+                    onWords = wordsVm::setWords,
+                    onOpen = { i -> backStack.add(Viewer(state.photos[i].id, list)) },
                 )
             }
             entry<Indexing> {
@@ -116,12 +186,16 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                 )
             }
             entry<Viewer> { key ->
-                val photos = library.photos
+                val fromResults = key.list?.let { lists[it] }
+                val photos = fromResults ?: library.photos
                 ViewerScreen(
                     photos = photos,
                     startIndex = photos.indexOfFirst { it.id == key.photoId }.coerceAtLeast(0),
                     onBack = { backStack.removeLastOrNull() },
+                    onSimilar = { backStack.add(Results(similarTo = it)) },
+                    onWords = { backStack.add(PhotoWords(it)) },
                     onPage = { page ->
+                        if (fromResults != null) return@ViewerScreen
                         // Keep the grid on the photo being viewed, so going back lands on it.
                         val item = library.items.indexOfFirst { it is GridItem.Cell && it.index == page }
                         val visible = gridState.layoutInfo.visibleItemsInfo
@@ -131,4 +205,13 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
             }
         },
     )
+}
+
+/** A tab's screen above the bottom navigation. */
+@Composable
+private fun Tabbed(tab: Tab, onSelect: (Tab) -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) { content() }
+        TabBar(tab, onSelect)
+    }
 }

@@ -7,14 +7,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -44,7 +41,7 @@ import app.pixely.ui.theme.PixelyColors
 import app.pixely.ui.thumbs.Thumbnail
 import coil3.compose.AsyncImage
 
-/** Every photo, newest first, in day groups. Search and Settings arrive in later weeks. */
+/** Every photo, newest first, in day groups. Settings arrives in week 8. */
 @Composable
 fun PhotosScreen(
     library: Library,
@@ -76,7 +73,7 @@ private fun Grid(items: List<GridItem>, state: LazyGridState, onOpen: (Int) -> U
         state = state,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp),
+        contentPadding = PaddingValues(bottom = 16.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
         items(
