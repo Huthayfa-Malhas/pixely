@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.map
 class IndexScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: PixelyDatabase,
+    private val deviceUse: DeviceUse,
 ) {
     private val work get() = WorkManager.getInstance(context)
 
@@ -31,10 +32,14 @@ class IndexScheduler @Inject constructor(
      */
     suspend fun start(policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP, delayMs: Long = 0) {
         val chargingOnly = db.metaDao().get(MetaKey.CHARGING_ONLY)?.toBooleanStrictOrNull() ?: true
+        // The system's charging constraint only to wake us when the charger goes in: it also fails once a
+        // full battery stops charging, and would stop the job though the phone is still plugged in.
+        // While plugged, the worker watches the plug itself.
+        val waitForCharger = chargingOnly && !deviceUse.plugged()
         val request = OneTimeWorkRequestBuilder<IndexWorker>()
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiresCharging(chargingOnly)
+                    .setRequiresCharging(waitForCharger)
                     .setRequiresBatteryNotLow(!chargingOnly)
                     .build()
             )

@@ -72,6 +72,9 @@ class IndexWorker @AssistedInject constructor(
         if (budget.remainingMs(System.currentTimeMillis()) <= 0) return pauseUntil(budget.resumeAt)
         meta.clear(MetaKey.RESUME_AT)
 
+        val chargingOnly = meta.get(MetaKey.CHARGING_ONLY)?.toBooleanStrictOrNull() ?: true
+        if (chargingOnly && !deviceUse.plugged()) return waitForCharger()
+
         setForeground(foregroundInfo(null))
         val started = SystemClock.elapsedRealtime()
         val detail = IndexSettings.detailOf(meta.get(MetaKey.DETAIL)).tokens
@@ -83,6 +86,7 @@ class IndexWorker @AssistedInject constructor(
             while (true) {
                 val used = SystemClock.elapsedRealtime() - started
                 if (budget.usedMs + used >= IndexBudget.LIMIT_MS) return pauseUntil(budget.resumeAt)
+                if (chargingOnly && !deviceUse.plugged()) return waitForCharger()
 
                 val pace = deviceUse.pace()
                 if (pace == Pace.PAUSE) {
@@ -158,6 +162,11 @@ class IndexWorker @AssistedInject constructor(
                     meta.put(IndexMeta(MetaKey.RESUME_AT, "${budget.resumeAt}"))
                     scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE, budget.resumeAt - now)
                 }
+                // Stopped for "not charging" while still plugged in (a full battery): go on without that constraint.
+                if (stopReason == WorkInfo.STOP_REASON_CONSTRAINT_CHARGING && deviceUse.plugged()) {
+                    Log.i(TAG, "Battery full, still plugged in; carrying on")
+                    scheduler.start(ExistingWorkPolicy.REPLACE)
+                }
                 saveBudget(budget)
                 Log.i(TAG, "Stopped after $indexed photos; ${budget.usedMs / 60_000} min of today's budget used")
             }
@@ -179,6 +188,13 @@ class IndexWorker @AssistedInject constructor(
         Log.i(TAG, "Daily budget used; resuming at $at")
         meta.put(IndexMeta(MetaKey.RESUME_AT, "$at"))
         scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE, (at - System.currentTimeMillis()).coerceAtLeast(0))
+        return Result.success()
+    }
+
+    /** Unplugged: queue a job that waits for the charger, behind this one. */
+    private suspend fun waitForCharger(): Result {
+        Log.i(TAG, "Unplugged; waiting for the charger")
+        scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE)
         return Result.success()
     }
 

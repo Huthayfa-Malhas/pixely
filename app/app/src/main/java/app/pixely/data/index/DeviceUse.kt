@@ -1,6 +1,9 @@
 package app.pixely.data.index
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.PowerManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -22,4 +25,12 @@ class DeviceUse @Inject constructor(@ApplicationContext private val context: Con
         ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) -> Pace.HALF
         else -> Pace.PAUSE
     }
+
+    /**
+     * On the charger, full battery or not. The system's "charging" goes false once a full battery stops
+     * taking current, and some phones (this POCO among them) report not charging while plugged in anyway.
+     */
+    fun plugged(): Boolean =
+        context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            ?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)?.let { it != 0 } ?: false
 }
