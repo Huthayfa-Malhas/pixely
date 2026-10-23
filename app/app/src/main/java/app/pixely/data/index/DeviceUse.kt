@@ -30,7 +30,21 @@ class DeviceUse @Inject constructor(@ApplicationContext private val context: Con
      * On the charger, full battery or not. The system's "charging" goes false once a full battery stops
      * taking current, and some phones (this POCO among them) report not charging while plugged in anyway.
      */
-    fun plugged(): Boolean =
-        context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            ?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)?.let { it != 0 } ?: false
+    fun plugged(): Boolean = (battery()?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+
+    fun batteryPercent(): Int = battery()?.let {
+        it.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) * 100 / it.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+    } ?: 100
+
+    fun needsCharger(chargingOnly: Boolean): Boolean = needsCharger(chargingOnly, plugged(), batteryPercent())
+
+    /** Sticky: the last battery broadcast, without registering a receiver. */
+    private fun battery(): Intent? = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
 }
+
+/** On battery, indexing stops here: the first full index costs most of a charge, new photos each day very little. */
+const val BATTERY_FLOOR = 50
+
+/** Plugged in, indexing runs whatever the level; on battery, only above [BATTERY_FLOOR] and when allowed. */
+fun needsCharger(chargingOnly: Boolean, plugged: Boolean, batteryPercent: Int): Boolean =
+    !plugged && (chargingOnly || batteryPercent < BATTERY_FLOOR)

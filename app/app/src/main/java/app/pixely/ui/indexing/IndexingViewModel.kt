@@ -16,6 +16,7 @@ import app.pixely.data.index.Detail
 import app.pixely.data.index.IndexScheduler
 import app.pixely.data.index.IndexSettings
 import app.pixely.data.index.IndexWorker
+import app.pixely.data.index.needsCharger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -34,7 +35,7 @@ sealed interface IndexStatus {
     data object Done : IndexStatus
     data object PausedByUser : IndexStatus
     data class Running(val charging: Boolean, val msLeft: Long?) : IndexStatus
-    data object WaitingForCharger : IndexStatus
+    data class WaitingForCharger(val batteryLow: Boolean) : IndexStatus
     data class Paused(val resumeAt: Long) : IndexStatus
     data object ModelMissing : IndexStatus
     data object Starting : IndexStatus
@@ -43,7 +44,7 @@ sealed interface IndexStatus {
 data class IndexingState(
     val progress: IndexProgress = IndexProgress(0, 0, 0),
     val status: IndexStatus = IndexStatus.Starting,
-    val chargingOnly: Boolean = true,
+    val chargingOnly: Boolean = false,
     val detail: Detail = Detail.FINE,
     val recent: List<GridPhoto> = emptyList(),
 ) {
@@ -60,6 +61,7 @@ fun indexStatus(
     msPerPhoto: Double?,
     chargingOnly: Boolean,
     charging: Boolean,
+    batteryPercent: Int,
     now: Long,
 ): IndexStatus = when {
     progress.pending == 0 -> IndexStatus.Done
@@ -68,7 +70,7 @@ fun indexStatus(
     work == WorkInfo.State.RUNNING -> IndexStatus.Running(charging, msPerPhoto?.let { (it * progress.pending).toLong() })
     problem == IndexWorker.PROBLEM_MODEL_MISSING -> IndexStatus.ModelMissing
     resumeAt != null && resumeAt > now -> IndexStatus.Paused(resumeAt)
-    chargingOnly && !charging -> IndexStatus.WaitingForCharger
+    needsCharger(chargingOnly, charging, batteryPercent) -> IndexStatus.WaitingForCharger(batteryLow = !chargingOnly)
     else -> IndexStatus.Starting
 }
 
@@ -87,9 +89,9 @@ class IndexingViewModel @Inject constructor(
         combine(scheduler.observe(), scheduler.observePaused(), ::Pair),
         combine(meta.observe(MetaKey.PROBLEM), meta.observe(MetaKey.RESUME_AT), meta.observe(MetaKey.MS_PER_PHOTO), ::Triple),
         settings.observeChargingOnly(),
-        charging(context),
-    ) { progress, (work, userPaused), (problem, resumeAt, msPerPhoto), chargingOnly, charging ->
-        indexStatus(progress, work?.state, userPaused, problem, resumeAt?.toLongOrNull(), msPerPhoto?.toDoubleOrNull(), chargingOnly, charging, System.currentTimeMillis())
+        power(context),
+    ) { progress, (work, userPaused), (problem, resumeAt, msPerPhoto), chargingOnly, (plugged, percent) ->
+        indexStatus(progress, work?.state, userPaused, problem, resumeAt?.toLongOrNull(), msPerPhoto?.toDoubleOrNull(), chargingOnly, plugged, percent, System.currentTimeMillis())
     }
 
     val state: StateFlow<IndexingState> = combine(
@@ -115,13 +117,15 @@ class IndexingViewModel @Inject constructor(
 }
 
 /**
- * Whether the phone is plugged in, now and as it changes. Plugged, not BatteryManager.isCharging:
- * some phones (this POCO among them) report not charging while on the charger.
+ * Whether the phone is plugged in, and its battery level, now and as they change. Plugged, not
+ * BatteryManager.isCharging: some phones (this POCO among them) report not charging while on the charger.
  */
-private fun charging(context: Context): Flow<Boolean> = callbackFlow {
+private fun power(context: Context): Flow<Pair<Boolean, Int>> = callbackFlow {
     val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            trySend(intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0)
+            val percent = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) * 100 /
+                intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+            trySend(Pair(intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0, percent))
         }
     }
     // Sticky: the receiver gets the current state straight away.

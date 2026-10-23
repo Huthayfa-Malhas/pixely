@@ -72,8 +72,8 @@ class IndexWorker @AssistedInject constructor(
         if (budget.remainingMs(System.currentTimeMillis()) <= 0) return pauseUntil(budget.resumeAt)
         meta.clear(MetaKey.RESUME_AT)
 
-        val chargingOnly = meta.get(MetaKey.CHARGING_ONLY)?.toBooleanStrictOrNull() ?: true
-        if (chargingOnly && !deviceUse.plugged()) return waitForCharger()
+        val chargingOnly = IndexSettings.chargingOnlyOf(meta.get(MetaKey.CHARGING_ONLY))
+        if (deviceUse.needsCharger(chargingOnly)) return waitForCharger()
 
         setForeground(foregroundInfo(null))
         val started = SystemClock.elapsedRealtime()
@@ -86,7 +86,7 @@ class IndexWorker @AssistedInject constructor(
             while (true) {
                 val used = SystemClock.elapsedRealtime() - started
                 if (budget.usedMs + used >= IndexBudget.LIMIT_MS) return pauseUntil(budget.resumeAt)
-                if (chargingOnly && !deviceUse.plugged()) return waitForCharger()
+                if (deviceUse.needsCharger(chargingOnly)) return waitForCharger()
 
                 val pace = deviceUse.pace()
                 if (pace == Pace.PAUSE) {
@@ -142,6 +142,7 @@ class IndexWorker @AssistedInject constructor(
                 if (pace == Pace.FULL) msPerPhoto = msPerPhoto?.let { it * 0.95 + ms * 0.05 } ?: ms.toDouble()
                 if (++indexed % PROGRESS_EVERY == 0) {
                     msPerPhoto?.let { meta.put(IndexMeta(MetaKey.MS_PER_PHOTO, "%.0f".format(it))) }
+                    Log.i(TAG, "$indexed photos; battery ${deviceUse.batteryPercent()}%, ${if (deviceUse.plugged()) "plugged" else "on battery"}, $pace")
                     // A killed process never reaches finally, so the budget is saved as we go.
                     saveBudget(budget.plus(SystemClock.elapsedRealtime() - started, System.currentTimeMillis()))
                     setForeground(foregroundInfo(photos.pendingCount()))
@@ -191,9 +192,9 @@ class IndexWorker @AssistedInject constructor(
         return Result.success()
     }
 
-    /** Unplugged: queue a job that waits for the charger, behind this one. */
+    /** Unplugged with charging-only on, or the battery under the floor: queue a job that waits for the charger. */
     private suspend fun waitForCharger(): Result {
-        Log.i(TAG, "Unplugged; waiting for the charger")
+        Log.i(TAG, "Battery ${deviceUse.batteryPercent()}%, unplugged; waiting for the charger")
         scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE)
         return Result.success()
     }

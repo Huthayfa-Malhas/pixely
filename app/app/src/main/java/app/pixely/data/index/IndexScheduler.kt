@@ -34,18 +34,12 @@ class IndexScheduler @Inject constructor(
     suspend fun start(policy: ExistingWorkPolicy = ExistingWorkPolicy.KEEP, delayMs: Long = 0) {
         // Everything that starts indexing comes through here, so a pause holds until the user lifts it.
         if (db.metaDao().get(MetaKey.USER_PAUSED) != null) return
-        val chargingOnly = db.metaDao().get(MetaKey.CHARGING_ONLY)?.toBooleanStrictOrNull() ?: true
+        val chargingOnly = IndexSettings.chargingOnlyOf(db.metaDao().get(MetaKey.CHARGING_ONLY))
         // The system's charging constraint only to wake us when the charger goes in: it also fails once a
         // full battery stops charging, and would stop the job though the phone is still plugged in.
-        // While plugged, the worker watches the plug itself.
-        val waitForCharger = chargingOnly && !deviceUse.plugged()
+        // Otherwise the worker watches the plug and the battery level itself.
         val request = OneTimeWorkRequestBuilder<IndexWorker>()
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiresCharging(waitForCharger)
-                    .setRequiresBatteryNotLow(!chargingOnly)
-                    .build()
-            )
+            .setConstraints(Constraints.Builder().setRequiresCharging(deviceUse.needsCharger(chargingOnly)).build())
             .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
             // A stop (app update, reboot, charger out) counts as an attempt; don't let the wait double each time.
             .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)

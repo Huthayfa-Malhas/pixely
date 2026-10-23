@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.pixely.data.index.BATTERY_FLOOR
 import app.pixely.data.index.Detail
 import app.pixely.ui.Icons
 import app.pixely.ui.theme.Bricolage
@@ -144,7 +145,9 @@ private fun Options(state: IndexingState, onChargingOnly: (Boolean) -> Unit) {
             Row(Modifier.fillMaxWidth().heightIn(min = 60.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Only while charging", style = MaterialTheme.typography.bodyLarge)
-                    Text("Fastest, no battery cost", style = MaterialTheme.typography.bodySmall, color = PixelyColors.TextFaint)
+                    Text(
+                        if (state.chargingOnly) "Never uses your battery" else "On battery, stops at $BATTERY_FLOOR%",
+                        style = MaterialTheme.typography.bodySmall, color = PixelyColors.TextFaint)
                 }
                 Switch(
                     checked = state.chargingOnly,
@@ -184,7 +187,8 @@ fun statusLine(status: IndexStatus): String = when (status) {
     IndexStatus.Done -> "Every photo is searchable"
     IndexStatus.PausedByUser -> "Paused · search works on what's done"
     is IndexStatus.Running -> (if (status.charging) "Charging" else "On battery") + (status.msLeft?.let { " · about ${duration(it)} left" } ?: "")
-    IndexStatus.WaitingForCharger -> "Waiting for the charger to continue"
+    is IndexStatus.WaitingForCharger ->
+        if (status.batteryLow) "Battery under $BATTERY_FLOOR% · continues on the charger" else "Waiting for the charger to continue"
     is IndexStatus.Paused -> "Paused for today · continues at ${clock(status.resumeAt)}"
     IndexStatus.ModelMissing -> "The AI model isn't on this phone yet"
     IndexStatus.Starting -> "Starting…"

@@ -5,6 +5,7 @@ import app.pixely.data.db.IndexProgress
 import app.pixely.data.index.IndexBudget
 import app.pixely.data.index.IndexBudget.Companion.DAY_MS
 import app.pixely.data.index.IndexBudget.Companion.LIMIT_MS
+import app.pixely.data.index.needsCharger
 import app.pixely.ui.indexing.IndexStatus
 import app.pixely.ui.indexing.duration
 import app.pixely.ui.indexing.indexStatus
@@ -34,7 +35,8 @@ class IndexingTest {
         resumeAt: Long? = null,
         chargingOnly: Boolean = true,
         charging: Boolean = false,
-    ) = indexStatus(IndexProgress(100, 100 - pending, 0), work, userPaused, problem, resumeAt, 1_300.0, chargingOnly, charging, now = 1_000)
+        battery: Int = 80,
+    ) = indexStatus(IndexProgress(100, 100 - pending, 0), work, userPaused, problem, resumeAt, 1_300.0, chargingOnly, charging, battery, now = 1_000)
 
     @Test
     fun `status says what is holding indexing up`() {
@@ -44,8 +46,19 @@ class IndexingTest {
         assertEquals(IndexStatus.Done, status(pending = 0, userPaused = true))
         assertEquals(IndexStatus.ModelMissing, status(problem = "model_missing"))
         assertEquals(IndexStatus.Paused(5_000), status(resumeAt = 5_000))
-        assertEquals(IndexStatus.WaitingForCharger, status(resumeAt = 500))
+        assertEquals(IndexStatus.WaitingForCharger(batteryLow = false), status(resumeAt = 500))
         assertEquals(IndexStatus.Starting, status(chargingOnly = false))
+        assertEquals(IndexStatus.WaitingForCharger(batteryLow = true), status(chargingOnly = false, battery = 49))
+        assertEquals(IndexStatus.Starting, status(chargingOnly = false, battery = 10, charging = true))
+    }
+
+    @Test
+    fun `on battery indexing stops at the floor unless charging only`() {
+        assertEquals(false, needsCharger(chargingOnly = false, plugged = false, batteryPercent = 50))
+        assertEquals(true, needsCharger(chargingOnly = false, plugged = false, batteryPercent = 49))
+        assertEquals(true, needsCharger(chargingOnly = true, plugged = false, batteryPercent = 100))
+        assertEquals(false, needsCharger(chargingOnly = true, plugged = true, batteryPercent = 100))
+        assertEquals(false, needsCharger(chargingOnly = false, plugged = true, batteryPercent = 5))
     }
 
     @Test

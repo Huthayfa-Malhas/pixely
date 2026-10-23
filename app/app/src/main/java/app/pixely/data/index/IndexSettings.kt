@@ -23,7 +23,7 @@ class IndexSettings @Inject constructor(
 ) {
     private val meta = db.metaDao()
 
-    fun observeChargingOnly(): Flow<Boolean> = meta.observe(MetaKey.CHARGING_ONLY).map { it?.toBooleanStrictOrNull() ?: true }
+    fun observeChargingOnly(): Flow<Boolean> = meta.observe(MetaKey.CHARGING_ONLY).map(::chargingOnlyOf)
 
     fun observeDetail(): Flow<Detail> = meta.observe(MetaKey.DETAIL).map(::detailOf)
 
@@ -56,6 +56,9 @@ class IndexSettings @Inject constructor(
     }
 
     companion object {
+        /** Off unless turned on: on battery, indexing stops at [BATTERY_FLOOR]. */
+        fun chargingOnlyOf(value: String?): Boolean = value?.toBooleanStrictOrNull() ?: false
+
         fun detailOf(value: String?): Detail = Detail.entries.firstOrNull { "${it.tokens}" == value } ?: Detail.FINE
     }
 }
