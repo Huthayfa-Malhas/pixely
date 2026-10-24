@@ -68,7 +68,11 @@ dependencies {
     implementation(libs.room3.runtime)
     implementation(libs.sqlite.bundled)
     ksp(libs.room3.compiler)
-    implementation(libs.mediapipe.retrieval)
+    implementation(libs.mediapipe.retrieval) {
+        // Usage statistics for Google; stand-ins in com.google.android.datatransport take their place.
+        exclude(group = "com.google.android.datatransport")
+        exclude(group = "com.google.firebase")
+    }
     implementation(libs.litertlm)
     implementation(libs.work.runtime)
     implementation(libs.hilt.work)
