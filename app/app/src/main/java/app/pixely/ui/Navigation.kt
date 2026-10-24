@@ -33,6 +33,10 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.pixely.data.media.PhotoAccess
+import app.pixely.ui.albums.AlbumScreen
+import app.pixely.ui.albums.AlbumViewModel
+import app.pixely.ui.albums.AlbumsScreen
+import app.pixely.ui.albums.AlbumsViewModel
 import app.pixely.ui.indexing.IndexingScreen
 import app.pixely.ui.indexing.IndexingViewModel
 import app.pixely.ui.photos.GridItem
@@ -68,6 +72,11 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object SettingsKey : NavKey
 
+@Serializable data object AlbumsTab : NavKey
+
+/** A smart set by its name, or Duplicates. */
+@Serializable data class Album(val key: String) : NavKey
+
 @Composable
 fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewModel = hiltViewModel()) {
     val access by vm.access.collectAsStateWithLifecycle()
@@ -81,10 +90,14 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
     val lists = remember { mutableStateMapOf<String, List<GridPhoto>>() }
 
     fun select(tab: Tab) {
-        // Photos is the start tab: back from Search returns to it.
+        // Photos is the start tab: back from the others returns to it.
         backStack.clear()
         backStack.add(Photos)
-        if (tab == Tab.SEARCH) backStack.add(SearchTab)
+        when (tab) {
+            Tab.PHOTOS -> Unit
+            Tab.SEARCH -> backStack.add(SearchTab)
+            Tab.ALBUMS -> backStack.add(AlbumsTab)
+        }
     }
 
     val askForPhotos = rememberLauncherForActivityResult(RequestMultiplePermissions()) {
@@ -188,6 +201,31 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onChargingOnly = indexingVm::setChargingOnly,
                     onPause = indexingVm::setPaused,
                     onDone = { backStack.removeLastOrNull() },
+                )
+            }
+            entry<AlbumsTab> {
+                val albumsVm: AlbumsViewModel = hiltViewModel()
+                val state by albumsVm.state.collectAsStateWithLifecycle()
+                Tabbed(Tab.ALBUMS, ::select) {
+                    AlbumsScreen(state = state, onOpen = { backStack.add(Album(it)) }, onSettings = { backStack.add(SettingsKey) })
+                }
+            }
+            entry<Album> { key ->
+                val albumVm: AlbumViewModel = hiltViewModel()
+                val state by albumVm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(key) { albumVm.start(key.key) }
+                // One viewer list per smart set, and one per duplicate group.
+                LaunchedEffect(state) {
+                    state.photos?.let { lists["album:${key.key}"] = it }
+                    state.groups?.forEachIndexed { g, photos -> lists["album:${key.key}:$g"] = photos }
+                }
+                AlbumScreen(
+                    state = state,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpen = { g, i ->
+                        val list = if (state.groups != null) "album:${key.key}:$g" else "album:${key.key}"
+                        lists[list]?.getOrNull(i)?.let { backStack.add(Viewer(it.id, list)) }
+                    },
                 )
             }
             entry<SettingsKey> {

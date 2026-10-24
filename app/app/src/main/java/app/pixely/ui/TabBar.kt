@@ -27,9 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pixely.ui.theme.PixelyColors
 
-enum class Tab(val label: String, val icon: ImageVector) { PHOTOS("Photos", Icons.Grid), SEARCH("Search", Icons.Search) }
+enum class Tab(val label: String, val icon: ImageVector) {
+    PHOTOS("Photos", Icons.Grid), SEARCH("Search", Icons.Search), ALBUMS("Albums", Icons.Albums),
+}
 
-/** Bottom navigation. Albums joins in week 8. */
+/** Bottom navigation. */
 @Composable
 fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
     Row(Modifier.fillMaxWidth().background(PixelyColors.Bar).navigationBarsPadding().height(80.dp)) {
