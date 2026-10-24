@@ -35,6 +35,8 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.pixely.data.media.PhotoAccess
+import app.pixely.ui.folders.FoldersScreen
+import app.pixely.ui.folders.FoldersViewModel
 import app.pixely.ui.indexing.IndexingScreen
 import app.pixely.ui.indexing.IndexingViewModel
 import app.pixely.ui.photos.GridItem
@@ -80,6 +82,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object SettingsKey : NavKey
 
 @Serializable data object Diagnostics : NavKey
+
+@Serializable data object Folders : NavKey
 
 @Composable
 fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewModel = hiltViewModel()) {
@@ -230,7 +234,13 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onRebuild = settingsVm::rebuild,
                     onDelete = settingsVm::deleteIndex,
                     onDiagnostics = { backStack.add(Diagnostics) },
+                    onFolders = { backStack.add(Folders) },
                 )
+            }
+            entry<Folders> {
+                val foldersVm: FoldersViewModel = hiltViewModel()
+                val state by foldersVm.state.collectAsStateWithLifecycle()
+                FoldersScreen(state = state, onBack = { backStack.removeLastOrNull() }, onSearched = foldersVm::setSearched)
             }
             entry<Diagnostics> {
                 val diagnosticsVm: DiagnosticsViewModel = hiltViewModel()

@@ -5,13 +5,18 @@ import androidx.work.ExistingWorkPolicy
 import app.pixely.data.db.IndexMeta
 import app.pixely.data.db.MetaKey
 import app.pixely.data.db.PixelyDatabase
+import app.pixely.data.media.Folder
+import app.pixely.data.media.MediaStoreSource
+import app.pixely.data.media.PhotoSync
 import app.pixely.data.model.MODEL_ID
 import app.pixely.data.search.DIMS
 import app.pixely.data.search.VectorIndex
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 /** Image tokens per photo: Fine reads small things better, Fast indexes about 1.7x quicker. */
 enum class Detail(val tokens: Int) { FINE(140), FAST(70) }
@@ -22,12 +27,31 @@ class IndexSettings @Inject constructor(
     private val db: PixelyDatabase,
     private val index: VectorIndex,
     private val scheduler: IndexScheduler,
+    private val sync: PhotoSync,
+    private val source: MediaStoreSource,
 ) {
     private val meta = db.metaDao()
 
     fun observeChargingOnly(): Flow<Boolean> = meta.observe(MetaKey.CHARGING_ONLY).map(::chargingOnlyOf)
 
     fun observeDetail(): Flow<Detail> = meta.observe(MetaKey.DETAIL).map(::detailOf)
+
+    fun observeSkippedFolders(): Flow<Set<String>> = meta.observe(MetaKey.SKIPPED_FOLDERS).map(PhotoSync::skippedOf)
+
+    /** The folders Pixely can see, read fresh from MediaStore. */
+    suspend fun folders(): List<Folder> = withContext(Dispatchers.IO) { source.folders() }
+
+    /**
+     * Leaves a folder out, or brings it back. Out: its photos leave Pixely's list and their vectors
+     * go (the files aren't touched). Back: they're added and indexed. Takes effect in one sync.
+     */
+    suspend fun setFolderSkipped(path: String, skipped: Boolean) {
+        val now = PhotoSync.skippedOf(meta.get(MetaKey.SKIPPED_FOLDERS))
+        val next = if (skipped) now + path else now - path
+        if (next == now) return
+        meta.put(IndexMeta(MetaKey.SKIPPED_FOLDERS, PhotoSync.skippedValue(next)))
+        sync.sync()
+    }
 
     fun observeSearchSize(): Flow<Int> = meta.observe(MetaKey.SEARCH_SIZE).map { it?.toIntOrNull() ?: DIMS }
 

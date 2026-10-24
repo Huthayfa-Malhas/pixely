@@ -2,6 +2,7 @@ package app.pixely.data.media
 
 import android.util.Log
 import app.pixely.data.db.IndexState
+import app.pixely.data.db.MetaKey
 import app.pixely.data.db.Photo
 import app.pixely.data.db.PixelyDatabase
 import app.pixely.data.db.SyncDiff
@@ -35,7 +36,8 @@ class PhotoSync @Inject constructor(
             val started = System.nanoTime()
             val dao = db.photoDao()
             val stored = dao.syncKeys()
-            val diff = diff(stored, source.readAll())
+            // A skipped folder's photos read as gone: rows and vectors go, as when they're deleted.
+            val diff = diff(stored, source.readAll(skippedOf(db.metaDao().get(MetaKey.SKIPPED_FOLDERS))))
             if (!diff.isEmpty) dao.apply(diff)
             if (diff.added.isNotEmpty() || diff.changed.isNotEmpty()) indexer.start()
             Log.i(TAG, "Sync: +${diff.added.size} ~${diff.changed.size} -${diff.removed.size} in ${(System.nanoTime() - started) / 1_000_000} ms")
@@ -50,6 +52,10 @@ class PhotoSync @Inject constructor(
 
     companion object {
         private const val TAG = "PhotoSync"
+
+        fun skippedOf(value: String?): Set<String> = value?.lines()?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+
+        fun skippedValue(folders: Set<String>): String = folders.sorted().joinToString("\n")
 
         /** A big clean-up leaves the index holding space for photos that are gone; a few deletions don't. */
         fun worthCompacting(removed: Int, before: Int): Boolean = removed > 0 && removed * 5 >= before

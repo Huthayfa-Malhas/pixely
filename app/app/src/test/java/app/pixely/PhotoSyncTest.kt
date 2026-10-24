@@ -34,6 +34,14 @@ class PhotoSyncTest {
     }
 
     @Test
+    fun `skipped folders survive being stored and read back`() {
+        val folders = setOf("Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images/", "DCIM/Camera/")
+        assertEquals(folders, PhotoSync.skippedOf(PhotoSync.skippedValue(folders)))
+        assertEquals(emptySet<String>(), PhotoSync.skippedOf(null))
+        assertEquals(emptySet<String>(), PhotoSync.skippedOf(""))
+    }
+
+    @Test
     fun `an unchanged library gives an empty diff`() {
         val diff = PhotoSync.diff(listOf(SyncKey(1, 10, 100)), listOf(photo(10, 100)))
         assertEquals(true, diff.isEmpty)

@@ -27,6 +27,8 @@ data class SettingsState(
     val busy: Boolean = false,
     /** What the last change set off, in a line. */
     val note: String? = null,
+    /** Folders switched off in Settings → Folders. */
+    val skippedFolders: Int = 0,
 )
 
 @HiltViewModel
@@ -48,9 +50,9 @@ class SettingsViewModel @Inject constructor(
         settings.observeChargingOnly(),
         settings.observeDetail(),
         settings.observeSearchSize(),
-        combine(busy, note, ::Pair),
-    ) { (progress, bytes), chargingOnly, detail, size, (busy, note) ->
-        SettingsState(progress, bytes, chargingOnly, detail, size, busy, note)
+        combine(busy, note, settings.observeSkippedFolders(), ::Triple),
+    ) { (progress, bytes), chargingOnly, detail, size, (busy, note, skipped) ->
+        SettingsState(progress, bytes, chargingOnly, detail, size, busy, note, skipped.size)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsState())
 
     fun setChargingOnly(on: Boolean) {

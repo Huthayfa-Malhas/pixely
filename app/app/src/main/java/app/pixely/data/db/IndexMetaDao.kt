@@ -38,4 +38,6 @@ object MetaKey {
     const val PROBLEM = "index_problem"
     const val DELEGATE = "delegate"
     const val MS_PER_PHOTO = "ms_per_photo"
+    /** Folders (RELATIVE_PATH) the user left out, one per line; their photos aren't synced or indexed. */
+    const val SKIPPED_FOLDERS = "skipped_folders"
 }

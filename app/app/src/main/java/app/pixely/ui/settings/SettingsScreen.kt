@@ -76,6 +76,7 @@ fun SettingsScreen(
     onRebuild: () -> Unit,
     onDelete: () -> Unit,
     onDiagnostics: () -> Unit,
+    onFolders: () -> Unit,
 ) {
     var confirm by rememberSaveable { mutableStateOf<Confirm?>(null) }
     Column(
@@ -145,6 +146,17 @@ fun SettingsScreen(
                 }
             }
             state.note?.let { Note(it) }
+            Card {
+                LinkRow(
+                    "Folders",
+                    when (state.skippedFolders) {
+                        0 -> "Every folder is searched"
+                        1 -> "1 folder left out"
+                        else -> "${state.skippedFolders} folders left out"
+                    },
+                    onFolders,
+                )
+            }
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SectionLabel("Model")
@@ -155,18 +167,7 @@ fun SettingsScreen(
                 }
             }
         }
-        Card {
-            Row(
-                Modifier.fillMaxWidth().clickable(onClick = onDiagnostics).heightIn(min = 60.dp).padding(horizontal = 18.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Diagnostics", fontSize = 15.sp)
-                    Text("Speed, failures and a log to send if something's wrong", fontSize = 13.sp, color = PixelyColors.TextFaint)
-                }
-                Icon(Icons.Back, contentDescription = null, tint = PixelyColors.TextFaint, modifier = Modifier.size(18.dp).rotate(180f))
-            }
-        }
+        Card { LinkRow("Diagnostics", "Speed, failures and a log to send if something's wrong", onDiagnostics) }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(
                 onClick = { confirm = Confirm.REBUILD },
@@ -229,6 +230,21 @@ private fun NoInternet() {
                 "Pixely can't connect to the internet. You can confirm it in Android's app info.",
                 fontSize = 14.sp, lineHeight = 20.sp, color = PixelyColors.GoodBody)
         }
+    }
+}
+
+/** A row that opens another screen. */
+@Composable
+private fun LinkRow(title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 60.dp).padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontSize = 15.sp)
+            Text(subtitle, fontSize = 13.sp, color = PixelyColors.TextFaint)
+        }
+        Icon(Icons.Back, contentDescription = null, tint = PixelyColors.TextFaint, modifier = Modifier.size(18.dp).rotate(180f))
     }
 }
 
