@@ -28,7 +28,7 @@ import org.junit.runner.RunWith
  * you can tap has a label TalkBack reads out and a touch area of at least 48 × 48 dp. (Google's
  * Accessibility Test Framework would need newer Guava and AndroidX versions in the app itself.)
  * Text contrast is checked from the colours: the faintest text on the lightest surface is 5.4:1.
- * Photos → viewer → Similar → Search → results → photo button → photo + words → Settings → Diagnostics.
+ * Photos → viewer → Similar → Search → results → photo button → photo + words → Settings → Diagnostics → Licences.
  * Welcome and the first index need a fresh install, so they're left to their own tests.
  */
 @OptIn(ExperimentalTestApi::class)
@@ -75,6 +75,12 @@ class MainFlowTest {
         rule.onNodeWithText("Diagnostics").performScrollTo().performClick()
         rule.waitUntilAtLeastOneExists(hasText("Chip"), 10_000)
         check("Diagnostics")
+        back()
+
+        rule.onNodeWithText("Open-source licences").performScrollTo().performClick()
+        rule.onNodeWithText("sqlite-vec").performClick()
+        rule.waitUntilAtLeastOneExists(hasText("Permission is hereby granted", substring = true), 5_000)
+        check("Licences")
     }
 
     private fun check(screen: String) {

@@ -1,9 +1,7 @@
 # Pixely
 
-On-device photo search for Android. See the "Pixely v1 Build Plan" doc for scope and decisions.
-
-Status: weeks 9–10 (polish). Photos and Search tabs, viewer with Similar, photo + words, background
-indexing with EmbeddingGemma 2, Settings and Diagnostics.
+Developer notes for the Android app. For what Pixely is and how to install it, see the
+[main README](../README.md).
 
 ## Build
 
@@ -12,6 +10,8 @@ indexing with EmbeddingGemma 2, Settings and Diagnostics.
     ./gradlew :app:assembleDebug :app:testDebugUnitTest
     adb install -r app/build/outputs/apk/debug/app-debug.apk
 
+The model file goes in the app's external files dir; see [docs/install-model.md](../docs/install-model.md).
+
 ## Layout
 
 - `data/db` — Room 3 entities (`photo`, `photo_embedding`, `index_meta`), DAOs, and the database
@@ -19,7 +19,8 @@ indexing with EmbeddingGemma 2, Settings and Diagnostics.
 - `data/search` — `VectorIndex`, `SqliteVecIndex` (search size + re-check at 768), `KotlinScanIndex` fallback.
 - `data/media` — `PhotoAccess` (full / partial / none), `MediaStoreSource`, `PhotoSync` (full diff),
   `LibraryWatcher` (sync on foreground and on MediaStore changes, debounced).
-- `ui` — Navigation 3 (`Welcome`, `Photos`, `Viewer`), theme and icons from the design canvas.
+- `ui` — Navigation 3 screens (welcome, photos, viewer, search, settings, folders, diagnostics,
+  licences), theme and icons.
 
 `app/src/main/jniLibs/*/libsqlite_vec.so` is sqlite-vec v0.1.9, pinned.
 
@@ -30,8 +31,8 @@ library (`-Ppixely.testFolder=` for everything in debug; release builds always s
 
 ## On-phone UI test
 
-Xiaomi blocks the Gradle test installer and adb input, so install both APKs by hand (approve each on
-the phone) and run the test with `am instrument`:
+Some phones (Xiaomi's among them) block Gradle's test installer and adb input, so install both APKs
+by hand (approve each on the phone) and run the test with `am instrument`:
 
     ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
     adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -58,5 +59,5 @@ the index and the model file. With the phone unlocked:
     # Measure (rebuild and reinstall the app first if the profile changed):
     adb shell am instrument -w -e class app.pixely.benchmark.PixelyBenchmarks app.pixely.benchmark/androidx.test.runner.AndroidJUnitRunner
 
-The journeys use accessibility actions, not touches, because this phone blocks injected input.
+The journeys use accessibility actions, not touches, because some phones block injected input.
 Reinstall the debug APK afterwards for the UI tests.

@@ -5,3 +5,9 @@ __pycache__/
 poc/data/
 poc/out/
 *.litertlm
+
+poc/
+bench/
+*.jks
+*.keystore
+keystore.properties

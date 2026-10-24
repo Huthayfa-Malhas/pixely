@@ -13,7 +13,7 @@ const val MODEL_ID = "embeddinggemma-2-740m"
 
 /**
  * Where the model file lives. Until the Play AI pack exists (it needs the Play Console), the file is
- * copied over adb into the app's external files dir, as the week-1 benchmark did:
+ * copied over adb into the app's external files dir (see docs/install-model.md):
  *   adb push embeddinggemma-2-740m.litertlm /sdcard/Android/data/app.pixely/files/models/
  */
 class ModelFiles @Inject constructor(@ApplicationContext private val context: Context) {

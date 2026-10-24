@@ -37,6 +37,7 @@ import androidx.navigation3.ui.NavDisplay
 import app.pixely.data.media.PhotoAccess
 import app.pixely.ui.folders.FoldersScreen
 import app.pixely.ui.folders.FoldersViewModel
+import app.pixely.ui.licences.LicencesScreen
 import app.pixely.ui.indexing.IndexingScreen
 import app.pixely.ui.indexing.IndexingViewModel
 import app.pixely.ui.photos.GridItem
@@ -84,6 +85,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object Diagnostics : NavKey
 
 @Serializable data object Folders : NavKey
+
+@Serializable data object Licences : NavKey
 
 @Composable
 fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewModel = hiltViewModel()) {
@@ -235,8 +238,10 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onDelete = settingsVm::deleteIndex,
                     onDiagnostics = { backStack.add(Diagnostics) },
                     onFolders = { backStack.add(Folders) },
+                    onLicences = { backStack.add(Licences) },
                 )
             }
+            entry<Licences> { LicencesScreen(onBack = { backStack.removeLastOrNull() }) }
             entry<Folders> {
                 val foldersVm: FoldersViewModel = hiltViewModel()
                 val state by foldersVm.state.collectAsStateWithLifecycle()

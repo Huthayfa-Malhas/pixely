@@ -25,7 +25,7 @@ import org.junit.runner.RunWith
 
 /**
  * The POC's search eval on the phone: the same 375 COCO photos and SugarCrepe captions the Mac scored
- * (poc/search_eval_ref.py writes the asset and the Mac numbers). Needs the test photos indexed.
+ * (the Mac proof of concept, not in this repo, wrote the asset and the Mac numbers). Needs the test photos indexed.
  * Results go to logcat (tag SearchEval) and files/eval/search_eval.txt.
  */
 @RunWith(AndroidJUnit4::class)
@@ -97,7 +97,7 @@ class SearchEvalTest {
     private suspend fun embedAll(items: List<Item>, objects: Set<String>, embed: suspend (String) -> FloatArray): Map<String, FloatArray> =
         (items.flatMap { listOf(it.caption, it.negative) } + objects.map { "a photo of $it" } + "a photo").distinct().associateWith { embed(it) }
 
-    /** As poc/binding.py: true caption beats its hard negative; caption finds its photo among the 375. */
+    /** As the Mac proof of concept scored it: true caption beats its hard negative; caption finds its photo among the 375. */
     private fun score(items: List<Item>, files: List<String>, gallery: List<FloatArray>, t: Map<String, FloatArray>): String {
         val at = files.withIndex().associate { it.value to it.index }
         val cats = items.groupBy { it.cat }.mapValues { (_, xs) ->

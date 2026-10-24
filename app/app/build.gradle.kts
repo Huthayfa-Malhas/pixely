@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -20,6 +22,19 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
+    // Release signing comes from keystore.properties next to settings.gradle.kts (never committed:
+    // storeFile, storePassword, keyAlias, keyPassword). Without it, release builds use the debug key.
+    val releaseKey = rootProject.file("keystore.properties").takeIf { it.isFile }
+        ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
+    signingConfigs {
+        if (releaseKey != null) create("release") {
+            storeFile = rootProject.file(releaseKey.getProperty("storeFile"))
+            storePassword = releaseKey.getProperty("storePassword")
+            keyAlias = releaseKey.getProperty("keyAlias")
+            keyPassword = releaseKey.getProperty("keyPassword")
+        }
+    }
+
     buildTypes {
         // Debug builds only see this folder, so testing never touches the phone's own photos.
         // Pass -Ppixely.testFolder= (empty) to see the whole library.
@@ -30,16 +45,20 @@ android {
         release {
             buildConfigField("String", "TEST_FOLDER", "\"\"")
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (releaseKey != null) "release" else "debug")
         }
         // Release code, profileable, for the :benchmark module. Like debug it only sees the test
         // folder, and it shares debug's key so it installs over debug without losing the index.
         create("benchmark") {
             initWith(getByName("release"))
             buildConfigField("String", "TEST_FOLDER", "\"Pictures/PixelyTest/\"")
+            signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
         }
     }
+
+    // The repo's licenses/ folder, shown in Settings → Open-source licences.
+    sourceSets.getByName("main").assets.directories.add("../../licenses")
 
     buildFeatures {
         compose = true

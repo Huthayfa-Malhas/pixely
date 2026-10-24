@@ -77,6 +77,7 @@ fun SettingsScreen(
     onDelete: () -> Unit,
     onDiagnostics: () -> Unit,
     onFolders: () -> Unit,
+    onLicences: () -> Unit,
 ) {
     var confirm by rememberSaveable { mutableStateOf<Confirm?>(null) }
     Column(
@@ -167,7 +168,13 @@ fun SettingsScreen(
                 }
             }
         }
-        Card { LinkRow("Diagnostics", "Speed, failures and a log to send if something's wrong", onDiagnostics) }
+        Card {
+            Column {
+                LinkRow("Diagnostics", "Speed, failures and a log to send if something's wrong", onDiagnostics)
+                Divider()
+                LinkRow("Open-source licences", "The code, model and fonts Pixely is built with", onLicences)
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(
                 onClick = { confirm = Confirm.REBUILD },

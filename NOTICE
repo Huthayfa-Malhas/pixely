@@ -1,0 +1,10 @@
+Pixely
+Copyright 2026 Huthayfa Malhas
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes third-party software, fonts and data under their own licences; see
+THIRD_PARTY_NOTICES.md and the licenses/ folder.
+
+It uses the EmbeddingGemma 2 model by Google (Apache License, Version 2.0), which is not
+included in this repository or in the app download.
