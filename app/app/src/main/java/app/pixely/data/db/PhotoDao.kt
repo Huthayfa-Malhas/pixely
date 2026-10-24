@@ -67,6 +67,9 @@ abstract class PhotoDao {
     )
     abstract fun observeProgress(): Flow<IndexProgress>
 
+    @Query("SELECT id, uri, mime, width, height, indexed_at FROM photo WHERE index_state = 'FAILED' ORDER BY indexed_at DESC LIMIT :limit")
+    abstract suspend fun failed(limit: Int): List<FailedPhoto>
+
     @Query("SELECT id, uri, taken_at, width, height FROM photo WHERE index_state = 'DONE' ORDER BY indexed_at DESC LIMIT :limit")
     abstract fun observeRecentlyIndexed(limit: Int): Flow<List<GridPhoto>>
 
@@ -80,6 +83,15 @@ abstract class PhotoDao {
 }
 
 data class PhotoTime(val id: Long, @ColumnInfo(name = "taken_at") val takenAt: Long)
+
+data class FailedPhoto(
+    val id: Long,
+    val uri: String,
+    val mime: String,
+    val width: Int,
+    val height: Int,
+    @ColumnInfo(name = "indexed_at") val failedAt: Long?,
+)
 
 data class SyncDiff(val added: List<Photo>, val changed: List<Photo>, val removed: List<Long>) {
     val isEmpty get() = added.isEmpty() && changed.isEmpty() && removed.isEmpty()

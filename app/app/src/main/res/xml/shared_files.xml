@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the share sheet may read: the diagnostics export only (DiagnosticsReport.EXPORT_DIR). -->
+<paths>
+    <cache-path name="diagnostics" path="diagnostics/" />
+</paths>

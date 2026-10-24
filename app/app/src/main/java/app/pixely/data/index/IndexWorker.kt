@@ -9,7 +9,6 @@ import android.content.pm.ServiceInfo
 import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -22,6 +21,7 @@ import app.pixely.R
 import app.pixely.data.db.IndexMeta
 import app.pixely.data.db.MetaKey
 import app.pixely.data.db.PixelyDatabase
+import app.pixely.data.diagnostics.DiagnosticsLog
 import app.pixely.data.media.PhotoAccess
 import app.pixely.data.media.PhotoSync
 import app.pixely.data.model.Embedder
@@ -50,6 +50,7 @@ class IndexWorker @AssistedInject constructor(
     private val sync: PhotoSync,
     private val scheduler: IndexScheduler,
     private val deviceUse: DeviceUse,
+    private val log: DiagnosticsLog,
 ) : CoroutineWorker(context, params) {
 
     private val meta = db.metaDao()
@@ -62,7 +63,7 @@ class IndexWorker @AssistedInject constructor(
 
         val modelFile = models.find()
         if (modelFile == null) {
-            Log.w(TAG, "No model at ${models.expected}")
+            log.w(TAG, "No model at ${models.expected}")
             meta.put(IndexMeta(MetaKey.PROBLEM, PROBLEM_MODEL_MISSING))
             return Result.success()
         }
@@ -81,6 +82,9 @@ class IndexWorker @AssistedInject constructor(
         var indexed = 0
         var embedder: Embedder? = null
         var pausedSince: Long? = null
+        // Each photo's time since the last progress line, for the diagnostics log.
+        var batchMs = 0L
+        var slowestMs = 0L
         try {
             var msPerPhoto = meta.get(MetaKey.MS_PER_PHOTO)?.toDoubleOrNull()
             while (true) {
@@ -102,7 +106,7 @@ class IndexWorker @AssistedInject constructor(
                     }
                     // A long pause would use up the daily foreground allowance doing nothing: stop, look again later.
                     if (paused >= GIVE_UP_AFTER_MS) {
-                        Log.i(TAG, "Phone in use; checking again in ${RETRY_AFTER_MS / 60_000} min")
+                        log.i(TAG, "Phone in use; checking again in ${RETRY_AFTER_MS / 60_000} min")
                         scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE, RETRY_AFTER_MS)
                         return Result.success()
                     }
@@ -119,7 +123,7 @@ class IndexWorker @AssistedInject constructor(
                     val t = SystemClock.elapsedRealtime()
                     Embedder.open(applicationContext, modelFile, detail).also {
                         meta.put(IndexMeta(MetaKey.DELEGATE, it.delegate.name))
-                        Log.i(TAG, "Model loaded on ${it.delegate} in ${SystemClock.elapsedRealtime() - t} ms")
+                        log.i(TAG, "Model loaded on ${it.delegate} in ${SystemClock.elapsedRealtime() - t} ms")
                     }
                 }.also { embedder = it }
 
@@ -127,7 +131,7 @@ class IndexWorker @AssistedInject constructor(
                 val vector = try {
                     model.photo(decodeForModel(applicationContext, Uri.parse(photo.uri)))
                 } catch (e: Exception) {
-                    Log.w(TAG, "Photo ${photo.id} failed", e)
+                    log.w(TAG, "Photo ${photo.id} failed", e)
                     null
                 }
                 val now = System.currentTimeMillis()
@@ -139,10 +143,15 @@ class IndexWorker @AssistedInject constructor(
                     if (photos.markDone(photo.id, now) == 0) index.remove(photo.id)
                 }
                 val ms = SystemClock.elapsedRealtime() - t0
+                batchMs += ms
+                slowestMs = maxOf(slowestMs, ms)
                 if (pace == Pace.FULL) msPerPhoto = msPerPhoto?.let { it * 0.95 + ms * 0.05 } ?: ms.toDouble()
                 if (++indexed % PROGRESS_EVERY == 0) {
                     msPerPhoto?.let { meta.put(IndexMeta(MetaKey.MS_PER_PHOTO, "%.0f".format(it))) }
-                    Log.i(TAG, "$indexed photos; battery ${deviceUse.batteryPercent()}%, ${if (deviceUse.plugged()) "plugged" else "on battery"}, $pace")
+                    log.i(TAG, "$indexed photos; ${batchMs / PROGRESS_EVERY} ms each, slowest $slowestMs ms; " +
+                        "battery ${deviceUse.batteryPercent()}%, ${if (deviceUse.plugged()) "plugged" else "on battery"}, $pace")
+                    batchMs = 0
+                    slowestMs = 0
                     // A killed process never reaches finally, so the budget is saved as we go.
                     saveBudget(budget.plus(SystemClock.elapsedRealtime() - started, System.currentTimeMillis()))
                     setForeground(foregroundInfo(photos.pendingCount()))
@@ -150,7 +159,7 @@ class IndexWorker @AssistedInject constructor(
                 // Half speed: rest as long as the photo took, leaving the GPU free for the screen.
                 if (pace == Pace.HALF) delay(ms)
             }
-            Log.i(TAG, "Done: $indexed photos in ${(SystemClock.elapsedRealtime() - started) / 1000} s")
+            log.i(TAG, "Done: $indexed photos in ${(SystemClock.elapsedRealtime() - started) / 1000} s")
             return Result.success()
         } finally {
             embedder?.close()
@@ -165,11 +174,11 @@ class IndexWorker @AssistedInject constructor(
                 }
                 // Stopped for "not charging" while still plugged in (a full battery): go on without that constraint.
                 if (stopReason == WorkInfo.STOP_REASON_CONSTRAINT_CHARGING && deviceUse.plugged()) {
-                    Log.i(TAG, "Battery full, still plugged in; carrying on")
+                    log.i(TAG, "Battery full, still plugged in; carrying on")
                     scheduler.start(ExistingWorkPolicy.REPLACE)
                 }
                 saveBudget(budget)
-                Log.i(TAG, "Stopped after $indexed photos; ${budget.usedMs / 60_000} min of today's budget used")
+                log.i(TAG, "Stopped after $indexed photos; ${budget.usedMs / 60_000} min of today's budget used")
             }
         }
     }
@@ -186,7 +195,7 @@ class IndexWorker @AssistedInject constructor(
 
     /** Queues the next run for when the window resets, behind this one. */
     private suspend fun pauseUntil(at: Long): Result {
-        Log.i(TAG, "Daily budget used; resuming at $at")
+        log.i(TAG, "Daily budget used; resuming at $at")
         meta.put(IndexMeta(MetaKey.RESUME_AT, "$at"))
         scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE, (at - System.currentTimeMillis()).coerceAtLeast(0))
         return Result.success()
@@ -194,7 +203,7 @@ class IndexWorker @AssistedInject constructor(
 
     /** Unplugged with charging-only on, or the battery under the floor: queue a job that waits for the charger. */
     private suspend fun waitForCharger(): Result {
-        Log.i(TAG, "Battery ${deviceUse.batteryPercent()}%, unplugged; waiting for the charger")
+        log.i(TAG, "Battery ${deviceUse.batteryPercent()}%, unplugged; waiting for the charger")
         scheduler.start(ExistingWorkPolicy.APPEND_OR_REPLACE)
         return Result.success()
     }

@@ -3,6 +3,7 @@ package app.pixely.ui.settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,6 +74,7 @@ fun SettingsScreen(
     onSearchSize: (Int) -> Unit,
     onRebuild: () -> Unit,
     onDelete: () -> Unit,
+    onDiagnostics: () -> Unit,
 ) {
     var confirm by rememberSaveable { mutableStateOf<Confirm?>(null) }
     Column(
@@ -144,6 +147,18 @@ fun SettingsScreen(
                     Text("EmbeddingGemma 2 · 740M", fontSize = 15.sp)
                     Text("On this phone · text + image · Apache 2.0", fontSize = 13.sp, color = PixelyColors.TextFaint)
                 }
+            }
+        }
+        Card {
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onDiagnostics).heightIn(min = 60.dp).padding(horizontal = 18.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Diagnostics", fontSize = 15.sp)
+                    Text("Speed, failures and a log to send if something's wrong", fontSize = 13.sp, color = PixelyColors.TextFaint)
+                }
+                Icon(Icons.Back, contentDescription = null, tint = PixelyColors.TextFaint, modifier = Modifier.size(18.dp).rotate(180f))
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -266,7 +281,7 @@ private fun Note(text: String) {
 }
 
 @Composable
-private fun Card(content: @Composable () -> Unit) {
+internal fun Card(content: @Composable () -> Unit) {
     Box(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
@@ -276,7 +291,7 @@ private fun Card(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Divider() = HorizontalDivider(color = PixelyColors.Raised)
+internal fun Divider() = HorizontalDivider(color = PixelyColors.Raised)
 
 /** "72 MB"; under 1 MB still reads as a size, not zero. */
 fun megabytes(bytes: Long): String = when {

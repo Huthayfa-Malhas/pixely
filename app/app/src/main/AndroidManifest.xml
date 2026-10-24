@@ -42,6 +42,17 @@
             android:foregroundServiceType="mediaProcessing|dataSync"
             tools:node="merge" />
 
+        <!-- Hands the diagnostics export to the app the user shares it with. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shared_files" />
+        </provider>
+
         <!-- WorkManager starts from PixelyApp, with Hilt's worker factory. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import app.pixely.data.db.GridPhoto
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,10 +50,14 @@ import app.pixely.ui.search.ResultsScreen
 import app.pixely.ui.search.ResultsViewModel
 import app.pixely.ui.search.SearchScreen
 import app.pixely.ui.search.SearchTabViewModel
+import app.pixely.ui.diagnostics.DiagnosticsScreen
+import app.pixely.ui.diagnostics.DiagnosticsViewModel
+import app.pixely.ui.diagnostics.shareDiagnostics
 import app.pixely.ui.settings.SettingsScreen
 import app.pixely.ui.settings.SettingsViewModel
 import app.pixely.ui.viewer.ViewerScreen
 import app.pixely.ui.welcome.WelcomeScreen
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 @Serializable data object Welcome : NavKey
@@ -71,6 +77,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object Indexing : NavKey
 
 @Serializable data object SettingsKey : NavKey
+
+@Serializable data object Diagnostics : NavKey
 
 @Serializable data object AlbumsTab : NavKey
 
@@ -239,6 +247,18 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onSearchSize = settingsVm::setSearchSize,
                     onRebuild = settingsVm::rebuild,
                     onDelete = settingsVm::deleteIndex,
+                    onDiagnostics = { backStack.add(Diagnostics) },
+                )
+            }
+            entry<Diagnostics> {
+                val diagnosticsVm: DiagnosticsViewModel = hiltViewModel()
+                val report by diagnosticsVm.report.collectAsStateWithLifecycle()
+                val scope = rememberCoroutineScope()
+                val context = LocalContext.current
+                DiagnosticsScreen(
+                    report = report,
+                    onBack = { backStack.removeLastOrNull() },
+                    onShare = { scope.launch { shareDiagnostics(context, diagnosticsVm.export()) } },
                 )
             }
             entry<Viewer> { key ->
