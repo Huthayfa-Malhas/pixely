@@ -46,4 +46,6 @@ class KotlinScanIndex(private val db: PixelyDatabase) : VectorIndex {
     override suspend fun searchSize(): Int = DIMS
 
     override suspend fun setSearchSize(n: Int) = Unit
+
+    override suspend fun compact() = db.vacuum()
 }

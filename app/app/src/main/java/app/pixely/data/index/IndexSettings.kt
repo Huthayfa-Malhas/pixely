@@ -1,8 +1,6 @@
 package app.pixely.data.index
 
-import androidx.room3.executeSQL
 import androidx.room3.useReaderConnection
-import androidx.room3.useWriterConnection
 import androidx.work.ExistingWorkPolicy
 import app.pixely.data.db.IndexMeta
 import app.pixely.data.db.MetaKey
@@ -68,11 +66,7 @@ class IndexSettings @Inject constructor(
         scheduler.pause()
         db.photoDao().markAllPending()
         index.clear()
-        db.useWriterConnection {
-            it.executeSQL("VACUUM")
-            // VACUUM writes the whole file through the WAL; truncate it, or the space isn't given back.
-            it.executeSQL("PRAGMA wal_checkpoint(TRUNCATE)")
-        }
+        index.compact()
     }
 
     /**

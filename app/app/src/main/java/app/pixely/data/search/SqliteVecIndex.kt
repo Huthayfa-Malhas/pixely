@@ -68,6 +68,20 @@ class SqliteVecIndex(private val db: PixelyDatabase) : VectorIndex {
 
     override suspend fun setSearchSize(n: Int) {
         require(n in SEARCH_SIZES) { "Unsupported search size $n" }
+        rebuild(n)
+        meta.put(IndexMeta(MetaKey.SEARCH_SIZE, "$n"))
+    }
+
+    /**
+     * vec0 stores vectors in fixed blocks of 1,024 and a delete only marks its slot empty, so the
+     * blocks stay. Rebuilt from the stored vectors, the table holds only what's left.
+     */
+    override suspend fun compact() {
+        rebuild(searchSize())
+        db.vacuum()
+    }
+
+    private suspend fun rebuild(n: Int) {
         val source = if (n == DIMS) "vector" else "vec_normalize(vec_slice(vector, 0, $n))"
         db.useWriterConnection { c ->
             c.immediateTransaction {
@@ -76,6 +90,5 @@ class SqliteVecIndex(private val db: PixelyDatabase) : VectorIndex {
                 executeSQL("INSERT INTO photo_search(photo_id, embedding) SELECT photo_id, $source FROM photo_embedding")
             }
         }
-        meta.put(IndexMeta(MetaKey.SEARCH_SIZE, "$n"))
     }
 }

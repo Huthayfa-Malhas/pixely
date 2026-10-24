@@ -26,6 +26,14 @@ class PhotoSyncTest {
     }
 
     @Test
+    fun `the index is compacted after a fifth of the library goes, not after a few photos`() {
+        assertEquals(true, PhotoSync.worthCompacting(removed = 11_298, before = 11_897))
+        assertEquals(true, PhotoSync.worthCompacting(removed = 200, before = 1_000))
+        assertEquals(false, PhotoSync.worthCompacting(removed = 199, before = 1_000))
+        assertEquals(false, PhotoSync.worthCompacting(removed = 0, before = 0))
+    }
+
+    @Test
     fun `an unchanged library gives an empty diff`() {
         val diff = PhotoSync.diff(listOf(SyncKey(1, 10, 100)), listOf(photo(10, 100)))
         assertEquals(true, diff.isEmpty)

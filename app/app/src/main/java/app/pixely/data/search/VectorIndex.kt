@@ -1,6 +1,8 @@
 package app.pixely.data.search
 
+import androidx.room3.executeSQL
 import androidx.room3.useReaderConnection
+import androidx.room3.useWriterConnection
 import app.pixely.data.db.PixelyDatabase
 
 /** A photo and how close it is to the query: cosine similarity at full size, higher is closer. */
@@ -30,6 +32,9 @@ interface VectorIndex {
 
     /** Switches the search size, rebuilding from the stored vectors. No re-index. */
     suspend fun setSearchSize(n: Int)
+
+    /** Gives back the space that removed vectors still hold, e.g. after many photos are deleted. */
+    suspend fun compact()
 }
 
 /** Reads stored vectors straight from photo_embedding, in chunks under SQLite's bound-parameter limit. */
@@ -40,5 +45,14 @@ internal suspend fun PixelyDatabase.readVectors(photoIds: Collection<Long>): Map
                 while (st.step()) put(st.getLong(0), st.getBlob(1).toVector())
             }
         }
+    }
+}
+
+/** Rewrites the database file without its free pages, so the space goes back to the phone. */
+internal suspend fun PixelyDatabase.vacuum() {
+    useWriterConnection {
+        it.executeSQL("VACUUM")
+        // VACUUM writes the whole file through the WAL; truncate it, or the space isn't given back.
+        it.executeSQL("PRAGMA wal_checkpoint(TRUNCATE)")
     }
 }
