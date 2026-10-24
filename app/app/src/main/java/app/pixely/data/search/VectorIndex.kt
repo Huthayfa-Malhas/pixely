@@ -42,12 +42,3 @@ internal suspend fun PixelyDatabase.readVectors(photoIds: Collection<Long>): Map
         }
     }
 }
-
-/** Every stored vector, one at a time, without holding them all in memory. */
-internal suspend fun PixelyDatabase.forEachVector(block: (photoId: Long, vector: FloatArray) -> Unit) {
-    useReaderConnection { c ->
-        c.usePrepared("SELECT photo_id, vector FROM photo_embedding") { st ->
-            while (st.step()) block(st.getLong(0), st.getBlob(1).toVector())
-        }
-    }
-}

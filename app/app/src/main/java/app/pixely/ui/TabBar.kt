@@ -27,9 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pixely.ui.theme.PixelyColors
 
-enum class Tab(val label: String, val icon: ImageVector) {
-    PHOTOS("Photos", Icons.Grid), SEARCH("Search", Icons.Search), ALBUMS("Albums", Icons.Albums),
-}
+enum class Tab(val label: String, val icon: ImageVector) { PHOTOS("Photos", Icons.Grid), SEARCH("Search", Icons.Search) }
 
 /** Bottom navigation. */
 @Composable

@@ -33,13 +33,6 @@ abstract class PhotoDao {
     @Query("SELECT id, uri, taken_at, width, height FROM photo WHERE id IN (:ids)")
     abstract suspend fun byIds(ids: List<Long>): List<GridPhoto>
 
-    @Query("SELECT id, taken_at FROM photo WHERE index_state = 'DONE'")
-    abstract suspend fun indexedTimes(): List<PhotoTime>
-
-    /** Changes whenever a photo is indexed, re-indexed or removed: albums are worked out again then. */
-    @Query("SELECT COUNT(*) || ':' || COALESCE(MAX(indexed_at), 0) FROM photo WHERE index_state = 'DONE'")
-    abstract fun observeIndexVersion(): Flow<String>
-
     @Query("SELECT id FROM photo WHERE taken_at >= :from AND taken_at < :until AND index_state = 'DONE'")
     abstract suspend fun indexedBetween(from: Long, until: Long): List<Long>
 
@@ -81,8 +74,6 @@ abstract class PhotoDao {
         if (diff.added.isNotEmpty()) insert(diff.added)
     }
 }
-
-data class PhotoTime(val id: Long, @ColumnInfo(name = "taken_at") val takenAt: Long)
 
 data class FailedPhoto(
     val id: Long,
