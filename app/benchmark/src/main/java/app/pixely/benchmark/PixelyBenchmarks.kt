@@ -39,9 +39,10 @@ class PixelyBenchmarks {
         packageName = PACKAGE,
         metrics = listOf(FrameTimingMetric()),
         compilationMode = mode,
-        startupMode = StartupMode.COLD,
+        // No startupMode: it would close the app between setupBlock and the measured part.
         iterations = 5,
-        setupBlock = { pressHome(); startActivityAndWait() },
+        // A fresh launch each time, so every run starts at the top of the grid.
+        setupBlock = { killProcess(); startActivityAndWait() },
     ) {
         scrollPhotos()
     }
@@ -50,9 +51,10 @@ class PixelyBenchmarks {
         packageName = PACKAGE,
         metrics = listOf(FrameTimingMetric()),
         compilationMode = mode,
-        startupMode = StartupMode.COLD,
+        // No startupMode: it would close the app between setupBlock and the measured part.
         iterations = 5,
-        setupBlock = { pressHome(); startActivityAndWait() },
+        // A fresh launch each time, so every run starts at the top of the grid.
+        setupBlock = { killProcess(); startActivityAndWait() },
     ) {
         search("dog on a beach")
     }
