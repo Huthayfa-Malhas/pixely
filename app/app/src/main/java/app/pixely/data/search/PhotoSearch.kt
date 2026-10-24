@@ -8,6 +8,9 @@ import kotlin.math.sqrt
 /** When a photo was taken, as a filter: from inclusive, until exclusive, epoch millis. */
 data class DateRange(val from: Long, val until: Long)
 
+/** Similar and photo + words need the photo's own vector, which indexing hasn't made yet. */
+class PhotoNotIndexedException : IllegalStateException("This photo isn't indexed yet")
+
 /**
  * The three ways to search: words, a photo (find similar), and a photo changed by words. Each ends in
  * the nearest photos by cosine, best first.
@@ -23,20 +26,23 @@ class PhotoSearch @Inject constructor(
         return pushDown(hits, queries.embed("a photo of $without"))
     }
 
-    /** Photos like this one; itself left out. */
+    /** Photos like this one; itself left out. Throws [PhotoNotIndexedException] if it has no vector yet. */
     suspend fun similar(photoId: Long, dates: DateRange? = null): List<Hit> {
-        val photo = index.vectors(listOf(photoId))[photoId] ?: return emptyList()
+        val photo = vector(photoId)
         return nearest(photo, dates).filter { it.photoId != photoId }
     }
 
     /** This photo, changed by words: "but in black". The mix is a plain sum, untested so far. */
     suspend fun photoAndWords(photoId: Long, words: String): List<Hit> {
-        val photo = index.vectors(listOf(photoId))[photoId] ?: return emptyList()
+        val photo = vector(photoId)
         if (words.isBlank()) return similar(photoId)
         val text = queries.embed(words)
         return nearest(normalized(FloatArray(photo.size) { photo[it] + WORDS_WEIGHT * text[it] }), null)
             .filter { it.photoId != photoId }
     }
+
+    private suspend fun vector(photoId: Long): FloatArray =
+        index.vectors(listOf(photoId))[photoId] ?: throw PhotoNotIndexedException()
 
     private suspend fun nearest(query: FloatArray, dates: DateRange?): List<Hit> {
         if (dates == null) return index.nearest(query, LIMIT)

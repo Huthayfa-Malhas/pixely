@@ -106,6 +106,7 @@ private fun summary(state: ResultsState): String {
     val number = NumberFormat.getIntegerInstance()
     return when {
         state.modelMissing -> "The AI model isn't on this phone yet, so search can't run"
+        state.photoNotIndexed -> "This photo isn't indexed yet. Similar works once indexing reaches it."
         state.searching && state.photos.isEmpty() -> "Searching…"
         state.photos.isEmpty() -> "No photos found" + if (state.dates != DateFilter.ANY) " in this date range" else ""
         else -> "${number.format(state.photos.size)} photos · best matches first" +

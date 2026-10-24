@@ -73,6 +73,7 @@ fun PhotoWordsScreen(state: PhotoWordsState, onClose: () -> Unit, onWords: (Stri
                 Text(
                     when {
                         state.modelMissing -> "AI model not installed"
+                        state.photoNotIndexed -> "Photo not indexed yet"
                         state.searching && state.photos.isEmpty() -> "Searching…"
                         else -> "${NumberFormat.getIntegerInstance().format(state.photos.size)} photos"
                     },

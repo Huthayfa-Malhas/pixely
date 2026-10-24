@@ -46,7 +46,8 @@ class MainFlowTest {
         rule.waitUntilAtLeastOneExists(hasText("Similar"), 5_000)
         check("Viewer")
         rule.onNodeWithText("Similar").performClick()
-        rule.waitUntilAtLeastOneExists(hasText("best matches first", substring = true), 15_000)
+        // The newest photo may still be waiting for indexing; then the screen says so.
+        rule.waitUntilAtLeastOneExists(hasText("best matches first", substring = true) or hasText("isn't indexed yet", substring = true), 15_000)
         check("Similar results")
         back()
         back()

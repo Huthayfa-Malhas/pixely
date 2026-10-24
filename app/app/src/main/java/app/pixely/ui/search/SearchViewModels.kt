@@ -7,6 +7,7 @@ import app.pixely.data.db.PixelyDatabase
 import app.pixely.data.search.DateRange
 import app.pixely.data.search.Hit
 import app.pixely.data.search.ModelMissingException
+import app.pixely.data.search.PhotoNotIndexedException
 import app.pixely.data.search.PhotoSearch
 import app.pixely.data.search.QueryEmbedder
 import app.pixely.data.search.RecentSearches
@@ -58,6 +59,8 @@ data class ResultsState(
     val modelMissing: Boolean = false,
     /** Photos not searchable yet because indexing hasn't reached them. */
     val notIndexed: Int = 0,
+    /** Similar to a photo that has no vector yet. */
+    val photoNotIndexed: Boolean = false,
 )
 
 /** One Results screen: words, or photos like one photo, with a date filter. */
@@ -117,6 +120,8 @@ class ResultsViewModel @Inject constructor(
                 _state.update { it.copy(photos = photos, searching = false, modelMissing = false, notIndexed = db.photoDao().pendingCount()) }
             } catch (e: ModelMissingException) {
                 _state.update { it.copy(photos = emptyList(), searching = false, modelMissing = true) }
+            } catch (e: PhotoNotIndexedException) {
+                _state.update { it.copy(photos = emptyList(), searching = false, photoNotIndexed = true) }
             }
         }
     }
@@ -128,6 +133,7 @@ data class PhotoWordsState(
     val photos: List<GridPhoto> = emptyList(),
     val searching: Boolean = false,
     val modelMissing: Boolean = false,
+    val photoNotIndexed: Boolean = false,
 )
 
 /** "Search with this photo": the photo, changed by words as they're typed. */
@@ -162,6 +168,8 @@ class PhotoWordsViewModel @Inject constructor(private val db: PixelyDatabase, pr
                 _state.update { it.copy(photos = photos, searching = false, modelMissing = false) }
             } catch (e: ModelMissingException) {
                 _state.update { it.copy(photos = emptyList(), searching = false, modelMissing = true) }
+            } catch (e: PhotoNotIndexedException) {
+                _state.update { it.copy(photos = emptyList(), searching = false, photoNotIndexed = true) }
             }
         }
     }
