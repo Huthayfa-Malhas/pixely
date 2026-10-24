@@ -1,5 +1,6 @@
 package app.pixely.data.search
 
+import androidx.room3.executeSQL
 import androidx.room3.useReaderConnection
 import androidx.room3.useWriterConnection
 import app.pixely.data.db.PixelyDatabase
@@ -23,6 +24,10 @@ class KotlinScanIndex(private val db: PixelyDatabase) : VectorIndex {
         db.useWriterConnection { c ->
             c.usePrepared("DELETE FROM photo_embedding WHERE photo_id = ?") { it.bindLong(1, photoId); it.step() }
         }
+    }
+
+    override suspend fun clear() {
+        db.useWriterConnection { it.executeSQL("DELETE FROM photo_embedding") }
     }
 
     override suspend fun vectors(photoIds: Collection<Long>): Map<Long, FloatArray> = db.readVectors(photoIds)

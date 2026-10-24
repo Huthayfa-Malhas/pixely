@@ -44,6 +44,8 @@ import app.pixely.ui.search.ResultsScreen
 import app.pixely.ui.search.ResultsViewModel
 import app.pixely.ui.search.SearchScreen
 import app.pixely.ui.search.SearchTabViewModel
+import app.pixely.ui.settings.SettingsScreen
+import app.pixely.ui.settings.SettingsViewModel
 import app.pixely.ui.viewer.ViewerScreen
 import app.pixely.ui.welcome.WelcomeScreen
 import kotlinx.serialization.Serializable
@@ -63,6 +65,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class PhotoWords(val photoId: Long) : NavKey
 
 @Serializable data object Indexing : NavKey
+
+@Serializable data object SettingsKey : NavKey
 
 @Composable
 fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewModel = hiltViewModel()) {
@@ -131,6 +135,7 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onOpen = { index -> backStack.add(Viewer(library.photos[index].id)) },
                     onChangeSelection = { askForPhotos.launch(PhotoAccess.permissions) },
                     onIndexing = { backStack.add(Indexing) },
+                    onSettings = { backStack.add(SettingsKey) },
                 )
                 }
             }
@@ -139,7 +144,7 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                 val recent by searchVm.recent.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) { searchVm.warm() }
                 Tabbed(Tab.SEARCH, ::select) {
-                    SearchScreen(recent = recent, onSearch = { backStack.add(Results(query = it.trim())) })
+                    SearchScreen(recent = recent, onSearch = { backStack.add(Results(query = it.trim())) }, onSettings = { backStack.add(SettingsKey) })
                 }
             }
             entry<Results> { key ->
@@ -183,6 +188,19 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                     onChargingOnly = indexingVm::setChargingOnly,
                     onPause = indexingVm::setPaused,
                     onDone = { backStack.removeLastOrNull() },
+                )
+            }
+            entry<SettingsKey> {
+                val settingsVm: SettingsViewModel = hiltViewModel()
+                val state by settingsVm.state.collectAsStateWithLifecycle()
+                SettingsScreen(
+                    state = state,
+                    onBack = { backStack.removeLastOrNull() },
+                    onChargingOnly = settingsVm::setChargingOnly,
+                    onDetail = settingsVm::setDetail,
+                    onSearchSize = settingsVm::setSearchSize,
+                    onRebuild = settingsVm::rebuild,
+                    onDelete = settingsVm::deleteIndex,
                 )
             }
             entry<Viewer> { key ->

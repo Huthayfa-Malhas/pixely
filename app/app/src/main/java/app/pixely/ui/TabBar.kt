@@ -1,6 +1,7 @@
 package app.pixely.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,5 +49,18 @@ fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
                 Text(tab.label, fontSize = 12.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Medium, color = if (on) PixelyColors.Text else PixelyColors.TextMuted)
             }
         }
+    }
+}
+
+/** The way into Settings, top right of every tab. */
+@Composable
+fun SettingsButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(48.dp),
+        shape = CircleShape,
+        colors = IconButtonDefaults.iconButtonColors(containerColor = PixelyColors.Field),
+    ) {
+        Icon(Icons.Gear, contentDescription = "Settings", tint = PixelyColors.Text, modifier = Modifier.size(22.dp))
     }
 }

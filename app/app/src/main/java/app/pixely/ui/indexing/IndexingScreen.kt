@@ -34,8 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pixely.data.index.BATTERY_FLOOR
-import app.pixely.data.index.Detail
 import app.pixely.ui.Icons
+import app.pixely.ui.settings.label
 import app.pixely.ui.theme.Bricolage
 import app.pixely.ui.theme.PixelyColors
 import app.pixely.ui.thumbs.Thumbnail
@@ -167,7 +167,7 @@ private fun Options(state: IndexingState, onChargingOnly: (Boolean) -> Unit) {
                     Text("Detail level", style = MaterialTheme.typography.bodyLarge)
                     Text("Fine reads small things better. Change it in Settings", style = MaterialTheme.typography.bodySmall, color = PixelyColors.TextFaint)
                 }
-                Text(if (state.detail == Detail.FINE) "Fine" else "Fast", style = MaterialTheme.typography.bodyLarge, color = PixelyColors.TextMuted)
+                Text(state.detail.label, style = MaterialTheme.typography.bodyLarge, color = PixelyColors.TextMuted)
             }
         }
     }

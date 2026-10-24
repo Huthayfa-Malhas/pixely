@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.pixely.ui.Icons
+import app.pixely.ui.SettingsButton
 import app.pixely.ui.theme.PixelyColors
 
 /** Examples that show the three kinds of query: a scene, details, and leaving something out. */
@@ -34,21 +35,24 @@ private val TRY = listOf("sunset at the beach", "two dogs in snow", "screenshots
 /** The Search tab: describe a photo, or start from a suggestion or a recent search. Smart sets join in week 8. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SearchScreen(recent: List<String>, onSearch: (String) -> Unit, modifier: Modifier = Modifier) {
+fun SearchScreen(recent: List<String>, onSearch: (String) -> Unit, onSettings: () -> Unit, modifier: Modifier = Modifier) {
     var text by rememberSaveable { mutableStateOf("") }
     Column(
         modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
-        SearchField(
-            value = text,
-            onValueChange = { text = it },
-            onSearch = { if (it.isNotBlank()) onSearch(it) },
-            placeholder = "Describe a photo…",
-            highlighted = true,
-            leading = { Icon(Icons.Search, contentDescription = null, tint = PixelyColors.Text, modifier = Modifier.size(20.dp)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            SearchField(
+                value = text,
+                onValueChange = { text = it },
+                onSearch = { if (it.isNotBlank()) onSearch(it) },
+                placeholder = "Describe a photo…",
+                highlighted = true,
+                leading = { Icon(Icons.Search, contentDescription = null, tint = PixelyColors.Text, modifier = Modifier.size(20.dp)) },
+                modifier = Modifier.weight(1f),
+            )
+            SettingsButton(onSettings)
+        }
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SectionLabel("Try")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

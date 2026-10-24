@@ -39,6 +39,15 @@ class SqliteVecIndex(private val db: PixelyDatabase) : VectorIndex {
         }
     }
 
+    override suspend fun clear() {
+        db.useWriterConnection { c ->
+            c.immediateTransaction {
+                executeSQL("DELETE FROM photo_embedding")
+                executeSQL("DELETE FROM photo_search")
+            }
+        }
+    }
+
     override suspend fun vectors(photoIds: Collection<Long>): Map<Long, FloatArray> = db.readVectors(photoIds)
 
     override suspend fun nearest(query: FloatArray, k: Int): List<Hit> {

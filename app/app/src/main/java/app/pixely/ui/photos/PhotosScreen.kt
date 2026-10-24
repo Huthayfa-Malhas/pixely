@@ -35,13 +35,14 @@ import androidx.compose.ui.unit.dp
 import app.pixely.data.media.PhotoAccess
 import app.pixely.ui.Icons
 import app.pixely.ui.Logo
+import app.pixely.ui.SettingsButton
 import app.pixely.ui.indexing.IndexStatus
 import app.pixely.ui.indexing.IndexingState
 import app.pixely.ui.theme.PixelyColors
 import app.pixely.ui.thumbs.Thumbnail
 import coil3.compose.AsyncImage
 
-/** Every photo, newest first, in day groups. Settings arrives in week 8. */
+/** Every photo, newest first, in day groups. */
 @Composable
 fun PhotosScreen(
     library: Library,
@@ -51,10 +52,14 @@ fun PhotosScreen(
     onOpen: (index: Int) -> Unit,
     onChangeSelection: () -> Unit,
     onIndexing: () -> Unit,
+    onSettings: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Logo()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Logo(Modifier.weight(1f))
+                SettingsButton(onSettings)
+            }
             if (access == PhotoAccess.PARTIAL) PartialAccess(library.photos.size, onChangeSelection)
             if (library.photos.isNotEmpty() && indexing.status != IndexStatus.Done) IndexingChip(indexing, onIndexing)
         }

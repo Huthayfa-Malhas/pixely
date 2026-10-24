@@ -35,6 +35,15 @@ object PixelyColors {
     val AccentText = Color(0xFFFFD58A)
     val Good = Color(0xFF9FDDBF)
     val GoodSoft = Color(0xFF1A2A22)
+    /** Settings' "No internet permission" card. */
+    val GoodCard = Color(0xFF14241C)
+    val GoodLine = Color(0xFF24402F)
+    val GoodTitle = Color(0xFFCFF0DE)
+    val GoodBody = Color(0xFFA9CDB9)
+    /** Delete index. */
+    val Danger = Color(0xFFF2867C)
+    val DangerLine = Color(0xFF5C2B27)
+    val NoteText = Color(0xFFF1DDB3)
 }
 
 private fun variable(res: Int, weight: Int) =

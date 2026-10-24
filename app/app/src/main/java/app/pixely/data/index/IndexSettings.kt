@@ -1,10 +1,14 @@
 package app.pixely.data.index
 
+import androidx.room3.executeSQL
+import androidx.room3.useReaderConnection
+import androidx.room3.useWriterConnection
 import androidx.work.ExistingWorkPolicy
 import app.pixely.data.db.IndexMeta
 import app.pixely.data.db.MetaKey
 import app.pixely.data.db.PixelyDatabase
 import app.pixely.data.model.MODEL_ID
+import app.pixely.data.search.DIMS
 import app.pixely.data.search.VectorIndex
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,6 +31,8 @@ class IndexSettings @Inject constructor(
 
     fun observeDetail(): Flow<Detail> = meta.observe(MetaKey.DETAIL).map(::detailOf)
 
+    fun observeSearchSize(): Flow<Int> = meta.observe(MetaKey.SEARCH_SIZE).map { it?.toIntOrNull() ?: DIMS }
+
     suspend fun detail(): Detail = detailOf(meta.get(MetaKey.DETAIL))
 
     /** The running job keeps its old constraint until restarted, so restart it. */
@@ -46,6 +52,36 @@ class IndexSettings @Inject constructor(
     /** Rebuilds photo_search from the stored vectors in seconds; nothing is indexed again. */
     suspend fun setSearchSize(n: Int) {
         if (n != index.searchSize()) index.setSearchSize(n)
+    }
+
+    /** Every photo again, failed ones too; search keeps using the old vectors until each is replaced. */
+    suspend fun rebuild() {
+        db.photoDao().markAllPending()
+        scheduler.resume()
+    }
+
+    /**
+     * Stops indexing and removes every vector, giving the space back. Search finds nothing until the
+     * user resumes indexing, which starts again from the newest photo.
+     */
+    suspend fun deleteIndex() {
+        scheduler.pause()
+        db.photoDao().markAllPending()
+        index.clear()
+        db.useWriterConnection {
+            it.executeSQL("VACUUM")
+            // VACUUM writes the whole file through the WAL; truncate it, or the space isn't given back.
+            it.executeSQL("PRAGMA wal_checkpoint(TRUNCATE)")
+        }
+    }
+
+    /**
+     * Bytes the database's live pages take: vectors, the search table and the photo list. Not the file
+     * sizes, which also count the WAL and pages freed by a search-size switch, waiting for reuse.
+     */
+    suspend fun indexBytes(): Long = db.useReaderConnection { c ->
+        suspend fun pragma(name: String) = c.usePrepared("PRAGMA $name") { st -> st.step(); st.getLong(0) }
+        (pragma("page_count") - pragma("freelist_count")) * pragma("page_size")
     }
 
     /** A new model makes every stored vector incompatible with new queries, so all photos go again. */

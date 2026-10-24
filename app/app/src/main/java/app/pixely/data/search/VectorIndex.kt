@@ -16,6 +16,9 @@ interface VectorIndex {
 
     suspend fun remove(photoId: Long)
 
+    /** Removes every stored vector. */
+    suspend fun clear()
+
     /** The stored full-size vectors of those photos that have one. */
     suspend fun vectors(photoIds: Collection<Long>): Map<Long, FloatArray>
 
