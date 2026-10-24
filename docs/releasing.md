@@ -39,7 +39,7 @@ but not for publishing.
 
 ## The model is not attached to releases
 
-The APK and the release stay small (a few MB); the model comes from Hugging Face, pinned to a
+The APK stays at about 78 MB (mostly the AI runtime libraries); the model comes from Hugging Face, pinned to a
 revision and a SHA-256 in `install-model.md`. Putting the model inside the APK would make every
 update a 485 MB download, and LiteRT-LM needs a plain file, so the app would have to copy it out of
 the APK and keep two copies (about 1 GB). It would also differ from the Play build, which gets the

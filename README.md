@@ -20,7 +20,7 @@ internet permission**: your photos never leave the phone.
 You need two files: the app and the AI model. The model (485 MB) is separate because the app can't
 download anything.
 
-1. **Install the app.** Download `pixely-0.1.apk` from [Releases](https://github.com/Huthayfa-Malhas/pixely/releases) on your phone and
+1. **Install the app.** Download `pixely-0.1.apk` (78 MB) from [Releases](https://github.com/Huthayfa-Malhas/pixely/releases) on your phone and
    open it, or from a computer: `adb install pixely-0.1.apk`
 2. **Install the model.** Follow [docs/install-model.md](docs/install-model.md) (needs a computer
    and a USB cable, about 5 minutes).
