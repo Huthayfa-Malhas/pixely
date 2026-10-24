@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "pixely"
 include(":app")
+include(":benchmark")

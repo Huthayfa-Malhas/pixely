@@ -32,6 +32,13 @@ android {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("debug")
         }
+        // Release code, profileable, for the :benchmark module. Like debug it only sees the test
+        // folder, and it shares debug's key so it installs over debug without losing the index.
+        create("benchmark") {
+            initWith(getByName("release"))
+            buildConfigField("String", "TEST_FOLDER", "\"Pictures/PixelyTest/\"")
+            matchingFallbacks += "release"
+        }
     }
 
     buildFeatures {
@@ -75,6 +82,8 @@ dependencies {
     }
     implementation(libs.litertlm)
     implementation(libs.work.runtime)
+    // Installs the baseline profile on first run when the app didn't come from Play.
+    implementation(libs.profileinstaller)
     implementation(libs.hilt.work)
     ksp(libs.hilt.androidx.compiler)
     testImplementation(libs.junit)
