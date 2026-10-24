@@ -42,6 +42,8 @@ import app.pixely.ui.photos.LibraryViewModel
 import app.pixely.ui.photos.PhotosScreen
 import app.pixely.ui.search.PhotoWordsScreen
 import app.pixely.ui.search.PhotoWordsViewModel
+import app.pixely.ui.search.PickPhotoScreen
+import app.pixely.ui.search.PickPhotoViewModel
 import app.pixely.ui.search.ResultsScreen
 import app.pixely.ui.search.ResultsViewModel
 import app.pixely.ui.search.SearchScreen
@@ -69,6 +71,9 @@ import kotlinx.serialization.Serializable
 @Serializable data class Results(val query: String = "", val similarTo: Long? = null) : NavKey
 
 @Serializable data class PhotoWords(val photoId: Long) : NavKey
+
+/** The search box's photo button. */
+@Serializable data object PickPhoto : NavKey
 
 @Serializable data object Indexing : NavKey
 
@@ -152,7 +157,12 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                 val recent by searchVm.recent.collectAsStateWithLifecycle()
                 LaunchedEffect(Unit) { searchVm.warm() }
                 Tabbed(Tab.SEARCH, ::select) {
-                    SearchScreen(recent = recent, onSearch = { backStack.add(Results(query = it.trim())) }, onSettings = { backStack.add(SettingsKey) })
+                    SearchScreen(
+                        recent = recent,
+                        onSearch = { backStack.add(Results(query = it.trim())) },
+                        onPhoto = { backStack.add(PickPhoto) },
+                        onSettings = { backStack.add(SettingsKey) },
+                    )
                 }
             }
             entry<Results> { key ->
@@ -171,6 +181,16 @@ fun PixelyNav(vm: LibraryViewModel = hiltViewModel(), indexingVm: IndexingViewMo
                         onOpen = { i -> backStack.add(Viewer(state.photos[i].id, list)) },
                     )
                 }
+            }
+            entry<PickPhoto> {
+                val pickVm: PickPhotoViewModel = hiltViewModel()
+                val photos by pickVm.photos.collectAsStateWithLifecycle()
+                PickPhotoScreen(
+                    photos = photos,
+                    onBack = { backStack.removeLastOrNull() },
+                    // Back from photo + words returns to Search, not the picker.
+                    onPick = { backStack[backStack.lastIndex] = PhotoWords(it.id) },
+                )
             }
             entry<PhotoWords> { key ->
                 val wordsVm: PhotoWordsViewModel = hiltViewModel()

@@ -14,6 +14,10 @@ abstract class PhotoDao {
     @Query("SELECT id, uri, taken_at, width, height FROM photo ORDER BY taken_at DESC, id DESC")
     abstract fun observeGrid(): Flow<List<GridPhoto>>
 
+    /** What can be searched with: photos that have a vector. */
+    @Query("SELECT id, uri, taken_at, width, height FROM photo WHERE index_state = 'DONE' ORDER BY taken_at DESC, id DESC")
+    abstract fun observeIndexedGrid(): Flow<List<GridPhoto>>
+
     @Query("SELECT COUNT(*) FROM photo")
     abstract fun observeCount(): Flow<Int>
 

@@ -72,6 +72,27 @@ class SearchScreensTest {
         shot("5_photo_words")
     }
 
+    /** The search box's photo button: pick a photo, then photo + words; back lands on Search. */
+    @Test
+    fun photoButton() {
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Photo 1"), 10_000)
+        rule.onNodeWithText("Search").performClick()
+        rule.onNodeWithContentDescription("Search with a photo").performClick()
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Result 1"), 10_000)
+        rule.waitForIdle()
+        shot("6_pick_photo")
+
+        rule.onNodeWithContentDescription("Result 1").performClick()
+        rule.waitUntilAtLeastOneExists(hasText("Search with this photo"), 5_000)
+        rule.onAllNodesWithText("at night").onFirst().performClick()
+        rule.waitUntilAtLeastOneExists(photoCount, 10_000)
+        rule.waitForIdle()
+        shot("7_picked_words")
+
+        rule.onNodeWithContentDescription("Close").performClick()
+        rule.waitUntilAtLeastOneExists(hasText("Describe a photo…"), 5_000)
+    }
+
     /** "199 photos": the count once a photo + words search has finished. */
     private val photoCount = SemanticsMatcher("a photo count") { node ->
         node.config.getOrNull(SemanticsProperties.Text)?.any { Regex("""^[\d,]+ photos$""").matches(it.text) } == true
