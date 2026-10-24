@@ -1,48 +1,48 @@
 # Pixely
 
-Search your Android photos by describing them, entirely on your phone.
+Search your photos by describing them. Everything runs on your phone.
 
-Type "dog on a beach" or "receipt from the pharmacy" and Pixely finds the photos, or pick a photo
-and find others like it. It uses Google's
-[EmbeddingGemma 2](https://huggingface.co/litert-community/embeddinggemma-2-740m-litert-lm) model,
-which runs on the phone's GPU. Nothing is uploaded: **the app has no internet permission at all**,
-which you can check in Android's app info or in
-[`AndroidManifest.xml`](app/app/src/main/AndroidManifest.xml).
+Type "dog on a beach" or "receipt from the pharmacy" and Pixely finds the photos. Or pick a photo and
+find similar ones. Pixely uses Google's EmbeddingGemma 2 AI model on the phone itself and has **no
+internet permission**: your photos never leave the phone.
+
+**Android only** (Android 10 or newer, 64-bit). iOS is coming soon.
+
+## Features
 
 - Search by words, by photo, or by photo plus words ("this, but at night").
-- Indexes in the background, while charging if you want, and keeps up with new photos.
-- Leave folders out, choose the search size, and see what indexing did in Diagnostics.
-
-Status: early (v0.1), tested on one phone so far (POCO X7 Pro, Android 16).
+- Indexes in the background (optionally only while charging) and keeps up with new photos.
+- Leave folders out of search.
+- Diagnostics you can share if something goes wrong.
 
 ## Install
 
-Pixely needs two things: the app, and the AI model file (485 MB). The model isn't inside the app,
-and the app can't download it, because it has no internet access.
+You need two files: the app and the AI model. The model (485 MB) is separate because the app can't
+download anything.
 
-1. **The app:** download `pixely-<version>.apk` from [Releases](../../releases) and open it on your
-   phone (Android 10 or newer, 64-bit). Android asks you to allow installs from your browser or
-   file manager.
-2. **The model:** follow [docs/install-model.md](docs/install-model.md). For now this takes a
-   computer with `adb`.
-3. Open Pixely, allow photo access, and indexing starts. A big library takes hours the first time;
-   you can search while it runs.
+1. **Install the app.** Download `pixely-0.1.apk` from [Releases](https://github.com/Huthayfa-Malhas/pixely/releases) on your phone and
+   open it, or from a computer: `adb install pixely-0.1.apk`
+2. **Install the model.** Follow [docs/install-model.md](docs/install-model.md) (needs a computer
+   and a USB cable, about 5 minutes).
+3. **Open Pixely** and allow photo access. Indexing starts; you can search while it runs.
+
+## Coming soon
+
+- **iOS app.**
+- **Full phone search:** find files and documents, not only photos.
+- **Install the model inside the app**, without a computer.
+- **Google Play** release.
 
 ## Build from source
 
-You need JDK 21 and the Android SDK (platform 37, build tools). From `app/`:
+Needs JDK 21 and the Android SDK (platform 37). From `app/`:
 
     ./gradlew :app:assembleRelease
-    adb install app/build/outputs/apk/release/app-release.apk
 
-Then install the model as above. Debug builds only look at `Pictures/PixelyTest/` on the phone, so
-testing never shows your own library; see [app/README.md](app/README.md) for the layout, tests and
-benchmarks. Release builds are signed with your debug key unless you add a `keystore.properties`
-(see [docs/releasing.md](docs/releasing.md)).
+The APK is in `app/build/outputs/apk/release/`. Developer notes: [app/README.md](app/README.md).
+Publishing a release: [docs/releasing.md](docs/releasing.md).
 
 ## Licence
 
-Apache License 2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE). Pixely includes sqlite-vec (MIT),
-the Figtree and Bricolage Grotesque fonts (SIL OFL 1.1) and a Lucide icon (ISC); see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The EmbeddingGemma 2 model is Google's, under
-Apache 2.0, and is downloaded separately.
+Apache 2.0, see [LICENSE](LICENSE). Third-party parts (sqlite-vec, fonts, an icon, the model) are
+listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
