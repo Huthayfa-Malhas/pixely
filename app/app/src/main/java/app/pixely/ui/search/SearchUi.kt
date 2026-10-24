@@ -68,7 +68,10 @@ fun SearchField(
         cursorBrush = SolidColor(PixelyColors.Accent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSearch(value) }),
-        modifier = modifier.then(if (focus != null) Modifier.focusRequester(focus) else Modifier),
+        // The placeholder is drawn, not announced: TalkBack reads it from here while the box is empty.
+        modifier = modifier
+            .then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
+            .semantics { if (value.isEmpty()) contentDescription = placeholder },
         decorationBox = { field ->
             Row(
                 Modifier

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -97,7 +98,12 @@ fun SettingsScreen(
                     Divider()
                     Value("Index size", megabytes(state.indexBytes))
                     Divider()
-                    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // The whole row is the switch, so TalkBack reads its name with it and any tap toggles it.
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 60.dp)
+                            .toggleable(value = state.chargingOnly, role = Role.Switch, onValueChange = onChargingOnly),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text("Only while charging", fontSize = 15.sp)
                             Text(
@@ -106,7 +112,7 @@ fun SettingsScreen(
                         }
                         Switch(
                             checked = state.chargingOnly,
-                            onCheckedChange = onChargingOnly,
+                            onCheckedChange = null,
                             colors = SwitchDefaults.colors(
                                 checkedTrackColor = PixelyColors.Accent,
                                 checkedThumbColor = PixelyColors.OnAccent,
