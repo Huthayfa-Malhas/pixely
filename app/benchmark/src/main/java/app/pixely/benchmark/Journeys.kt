@@ -30,7 +30,9 @@ fun MacrobenchmarkScope.search(query: String) {
     field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
         putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query)
     })
-    field.performAction(AccessibilityAction.ACTION_IME_ENTER.id)
+    // Search only once the box shows the words; sooner, it searches an empty box, which does nothing.
+    val typed = waitFor { it.isEditable && it.text?.toString() == query } ?: error("Couldn't type $query")
+    typed.performAction(AccessibilityAction.ACTION_IME_ENTER.id)
     waitFor(30_000) { it.text?.toString()?.contains("best matches first") == true } ?: error("No results for $query")
     repeat(3) {
         waitFor { it.isScrollable }?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
